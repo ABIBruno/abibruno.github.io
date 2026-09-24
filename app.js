@@ -56,7 +56,7 @@
     try { const raw = store.get('sessionStorage', 'abi-pkey'); if (raw) { const k = await imp(raw); if (await tryPKey(k)) pkey = k; } } catch {}
   }
   async function decryptFile(k, url) {
-    const res = await fetch(url);
+    const res = await fetch(url + '?v=' + (window.__V || '1'));
     if (!res.ok) throw new Error('Datei nicht gefunden: ' + url);
     const buf = new Uint8Array(await res.arrayBuffer());
     return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, k, buf.slice(12));
@@ -65,7 +65,7 @@
   function loadScript(src) {
     return new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = src; s.onload = res; s.onerror = () => rej(new Error('Laden fehlgeschlagen: ' + src));
+      s.src = src + '?v=' + (window.__V || '1'); s.onload = res; s.onerror = () => rej(new Error('Laden fehlgeschlagen: ' + src));
       document.head.appendChild(s);
     });
   }
