@@ -18,7 +18,10 @@
   const app = document.getElementById('app');
   const cache = {};
   let key = null;
+  let pkey = null;
   let pending = null;
+  let lectCache = null, privCache = null;
+  const blobCache = {};
 
   /* ---------- Speicher (sicher gekapselt) ---------- */
   const store = {
@@ -31,10 +34,10 @@
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
 
-  async function deriveKey(pw) {
+  async function deriveKey(pw, salt = META.salt) {
     const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt: b64(META.salt), iterations: META.iter, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt: b64(salt), iterations: META.iter, hash: 'SHA-256' },
       base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
   }
   async function decrypt(k, blob) {
@@ -44,13 +47,19 @@
   async function tryKey(k) {
     try { return (await decrypt(k, META.check)) === 'ABIdasmuss-ok'; } catch { return false; }
   }
+  async function tryPKey(k) {
+    try { return (await decrypt(k, META.pcheck)) === 'ABIdasmuss-privat-ok'; } catch { return false; }
+  }
   async function restoreKey() {
-    const raw = store.get('sessionStorage', 'abi-key');
-    if (!raw) return;
-    try {
-      const k = await crypto.subtle.importKey('raw', b64(raw), { name: 'AES-GCM' }, true, ['decrypt']);
-      if (await tryKey(k)) key = k;
-    } catch {}
+    const imp = raw => crypto.subtle.importKey('raw', b64(raw), { name: 'AES-GCM' }, true, ['decrypt']);
+    try { const raw = store.get('sessionStorage', 'abi-key'); if (raw) { const k = await imp(raw); if (await tryKey(k)) key = k; } } catch {}
+    try { const raw = store.get('sessionStorage', 'abi-pkey'); if (raw) { const k = await imp(raw); if (await tryPKey(k)) pkey = k; } } catch {}
+  }
+  async function decryptFile(k, url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Datei nicht gefunden: ' + url);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, k, buf.slice(12));
   }
 
   function loadScript(src) {
@@ -67,6 +76,16 @@
     return cache[n];
   }
   const getAll = () => Promise.all([1, 2, 3, 4, 5, 6].map(getLB));
+  async function getLect() {
+    if (lectCache) return lectCache;
+    if (!window.__LECT) await loadScript('data/lect.js');
+    return (lectCache = JSON.parse(await decrypt(key, window.__LECT)));
+  }
+  async function getPriv() {
+    if (privCache) return privCache;
+    if (!window.__PRIV) await loadScript('data/priv.js');
+    return (privCache = JSON.parse(await decrypt(pkey, window.__PRIV)));
+  }
 
   /* ---------- Sperre ---------- */
   const lockModal = document.getElementById('m-lock');
@@ -75,8 +94,8 @@
   const lockBtn = document.getElementById('lockBtn');
 
   function updateLockBtn() {
-    lockBtn.textContent = key ? '🔓' : '🔒';
-    lockBtn.title = key ? 'Wieder sperren' : 'Entsperren';
+    lockBtn.textContent = (key || pkey) ? '🔓' : '🔒';
+    lockBtn.title = (key || pkey) ? 'Wieder sperren' : 'Entsperren';
     lockBtn.setAttribute('aria-label', lockBtn.title);
   }
   function requireUnlock(then) {
@@ -106,12 +125,43 @@
     }
   });
   lockBtn.addEventListener('click', () => {
-    if (key) {
-      key = null; for (const k in cache) delete cache[k];
-      store.del('sessionStorage', 'abi-key'); updateLockBtn();
+    if (key || pkey) {
+      key = null; pkey = null; lectCache = null; privCache = null;
+      for (const k in cache) delete cache[k];
+      for (const k in blobCache) { URL.revokeObjectURL(blobCache[k]); delete blobCache[k]; }
+      store.del('sessionStorage', 'abi-key'); store.del('sessionStorage', 'abi-pkey'); updateLockBtn();
       location.hash = '#/';
       render();
     } else requireUnlock(render);
+  });
+
+  /* ---------- Privat-Sperre ---------- */
+  const privModal = document.getElementById('m-priv');
+  const ppwInput = document.getElementById('ppw');
+  const ppwErr = document.getElementById('ppwErr');
+  let ppending = null;
+  function requirePriv(then) {
+    if (pkey) return then();
+    ppending = then; ppwErr.hidden = true; ppwInput.value = '';
+    openModal('priv'); setTimeout(() => ppwInput.focus(), 50);
+  }
+  document.getElementById('privForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('ppwBtn');
+    btn.disabled = true; btn.textContent = 'PRÜFE …';
+    const k = await deriveKey(ppwInput.value.trim(), META.psalt);
+    btn.disabled = false; btn.textContent = 'ÖFFNEN';
+    if (await tryPKey(k)) {
+      pkey = k;
+      store.set('sessionStorage', 'abi-pkey', toB64(await crypto.subtle.exportKey('raw', k)));
+      updateLockBtn(); closeModals();
+      const p = ppending; ppending = null; if (p) p(); else render();
+    } else {
+      ppwErr.hidden = false;
+      const box = privModal.querySelector('.modal-box');
+      box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+      ppwInput.select();
+    }
   });
 
   /* ---------- Modals ---------- */
@@ -121,6 +171,7 @@
     const o = e.target.closest('[data-open]'); if (o) openModal(o.dataset.open);
     if (e.target.closest('[data-close]') || e.target.classList.contains('modal')) {
       if (lockModal.classList.contains('open') && pending && !key) { pending = null; if (!location.hash || location.hash === '#/') render(); else location.hash = '#/'; }
+      if (privModal.classList.contains('open') && ppending && !pkey) { ppending = null; if (location.hash.startsWith('#/privat')) location.hash = '#/'; }
       closeModals();
     }
   });
@@ -148,6 +199,26 @@
     </a>`;
   }
 
+  const mb = n => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  function lectCardHTML(v, kind = 'v') {
+    const acc = LB[v.lb]?.accent || 'var(--cyan)';
+    const href = kind === 'v' ? `#/vorlesung/${v.id}` : `#/privat/${v.id}`;
+    const n = v.tasks ? v.tasks.length : 0;
+    return `<a class="card lect" style="--accent:${acc}" href="${href}">
+      <div class="top">
+        <span class="badge" style="color:${acc};border-color:${acc}66">LB${v.lb}</span>
+        ${v.topic ? `<span class="badge part">${esc(v.topic)}</span>` : ''}
+        <span class="badge">${v.pages} S.</span>
+      </div>
+      <h3><span class="docico">${kind === 'v' ? '📄' : '🔐'}</span>${twoTone(v.title)}</h3>
+      <p>${kind === 'v' ? (n ? `Passt zu ${n} Prüfungsaufgabe${n > 1 ? 'n' : ''}` : 'Grundlagen') : 'Zusammenfassung'} · ${mb(v.size)}</p>
+    </a>`;
+  }
+  function topicChips(list, active, attr = 'data-topic') {
+    const topics = [...new Set(list.map(v => v.topic))];
+    return `<div class="chips">${['alle', ...topics].map(o => `<button class="chip${o === active ? ' on' : ''}" ${attr}="${esc(o)}">${o === 'alle' ? 'ALLE THEMEN' : esc(o.toUpperCase())}</button>`).join('')}</div>`;
+  }
+
   /* ---------- Seiten ---------- */
   function home() {
     const tiles = Object.entries(LB).map(([n, l]) => `
@@ -169,10 +240,13 @@
       </div>
       <div class="results" id="results"></div>
       <div class="sechead"><h2><b>6</b> LERNBEREICHE</h2></div>
-      <div class="tiles">
-        ${tiles}
+      <div class="tiles lbtiles">${tiles}</div>
+      <div class="sechead"><h2>EXTRAS</h2></div>
+      <div class="tiles extras">
+        <a class="tile" style="--accent:#9ad8ff" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Vorlesungen</span><span class="s">Nach Thema filtern</span></a>
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">66 Aufgaben</span></a>
+        <a class="tile" style="--accent:#f08ad8" href="#/privat"><span class="lockbadge">${pkey ? '🔓' : '🔐'}</span><span class="emoji">🗝️</span><span class="t">Privat</span><span class="s">Extra-Passwort</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -203,17 +277,94 @@
   }
   const applyFilter = (tasks, f) => f === 'alle' ? tasks : f === 'A' ? tasks.filter(t => t.part === 'A') : f === 'B' ? tasks.filter(t => t.part !== 'A') : tasks.filter(t => t.year === f);
 
-  async function listLB(n, filter = 'alle') {
+  async function listLB(n, filter = 'alle', topic = 'alle', open = true) {
     const l = LB[n];
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
-    const data = await getLB(n);
+    const [data, lect] = await Promise.all([getLB(n), getLect()]);
     const tasks = applyFilter(data.tasks, filter);
+    const mine = lect.filter(v => v.lb == n);
+    const shown = topic === 'alle' ? mine : mine.filter(v => v.topic === topic);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben</div></div></div>
+        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben · ${mine.length} Vorlesungen</div></div></div>
+      <details class="lectbox" style="--accent:${l.accent}" ${open ? 'open' : ''}>
+        <summary><span>📚 VORLESUNGEN ZU LB${n}</span><span class="cnt">${mine.length}</span></summary>
+        ${mine.length ? `${topicChips(mine, topic)}<div class="cards small">${shown.map(v => lectCardHTML(v)).join('')}</div>`
+          : '<p class="empty">Zu diesem Lernbereich gibt es noch keine Vorlesungen – im Teams-Kurs ist hierzu noch nichts hochgeladen.</p>'}
+      </details>
+      <div class="sechead"><h2>AUFGABEN</h2></div>
       ${chipsHTML(data.tasks, filter)}
       <div class="cards">${tasks.map(t => cardHTML(t, n)).join('')}</div>`;
-    app.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f)));
+    app.querySelectorAll('.chip[data-f]').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f, topic, app.querySelector('.lectbox').open)));
+    app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => listLB(n, filter, c.dataset.topic, true)));
+  }
+
+  async function lectPage(lbSel = 'alle', topic = 'alle') {
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const lect = await getLect();
+    const inLb = lbSel === 'alle' ? lect : lect.filter(v => String(v.lb) === String(lbSel));
+    const shown = topic === 'alle' ? inLb : inLb.filter(v => v.topic === topic);
+    const lbs = [...new Set(lect.map(v => v.lb))];
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Vorlesungen</h1><div class="meta">${lect.length} Vorlesungen aus dem Unterricht · nach Lernbereich und Thema filtern</div></div></div>
+      <div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE LB' : 'LB' + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
+      ${lbSel === 'alle' ? '' : topicChips(inLb, topic)}
+      <div class="cards">${shown.map(v => lectCardHTML(v)).join('')}</div>
+      <p class="empty" style="margin-top:22px">Für LB6 (Geldpolitik) gibt es noch keine Vorlesungen.</p>`;
+    app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => lectPage(c.dataset.lb, 'alle')));
+    app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => lectPage(lbSel, c.dataset.topic)));
+  }
+
+  async function privPage(lbSel = 'alle') {
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const zf = await getPriv();
+    const lbs = [...new Set(zf.map(v => v.lb))].sort();
+    const shown = lbSel === 'alle' ? zf : zf.filter(v => String(v.lb) === String(lbSel));
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Privat</h1><div class="meta">${zf.length} Zusammenfassungen · mit Extra-Passwort geschützt</div></div></div>
+      <div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE LB' : 'LB' + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
+      <div class="cards">${shown.map(v => lectCardHTML(v, 'p')).join('')}</div>`;
+    app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => privPage(c.dataset.lb)));
+  }
+
+  async function viewer(kind, id) {
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE DOKUMENT …</p>';
+    const list = kind === 'v' ? await getLect() : await getPriv();
+    const v = list.find(x => x.id === id);
+    if (!v) { location.hash = kind === 'v' ? '#/vorlesungen' : '#/privat'; return; }
+    const ck = kind + id;
+    if (!blobCache[ck]) {
+      const buf = await decryptFile(kind === 'v' ? key : pkey, `data/${kind}/${id}.bin`);
+      blobCache[ck] = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+    }
+    const url = blobCache[ck];
+    const back = kind === 'v' ? `#/lb/${v.lb}` : '#/privat';
+    let tasksHTML = '';
+    if (kind === 'v' && v.tasks.length) {
+      const all = await getAll();
+      const found = [];
+      all.forEach((lb, i) => lb.tasks.forEach(t => { if (v.tasks.includes(t.id)) found.push(`<a class="minitask" href="#/lb/${i + 1}/${t.id}"><b>${t.year} · ${esc(t.nr)}</b> ${esc(t.topic)}</a>`); }));
+      tasksHTML = `<div class="box"><div class="lbl">Passende Prüfungsaufgaben</div><div class="minitasks">${found.join('')}</div></div>`;
+    }
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="${back}" id="vback" aria-label="Zurück">←</a>
+        <div><h1>${esc(v.title)}</h1><div class="meta">LB${v.lb} · ${esc(LB[v.lb].full)} · ${v.pages} Seiten</div></div></div>
+      <div class="task-layout">
+        <aside class="side">
+          <div class="box" style="display:grid;gap:8px">
+            <div class="lbl">Dokument</div>
+            <a class="btn" href="${url}" target="_blank" rel="noopener">IN NEUEM TAB ÖFFNEN</a>
+            <a class="btn ghost" href="${url}" download="${esc(v.file)}">HERUNTERLADEN</a>
+          </div>
+          ${tasksHTML}
+        </aside>
+        <div class="pdfwrap"><iframe class="pdf" src="${url}#view=FitH" title="${esc(v.title)}"></iframe>
+          <p class="pdfhint">Wird das Dokument nicht angezeigt (z. B. am Handy)? Nutze „In neuem Tab öffnen“ oder „Herunterladen“.</p></div>
+      </div>`;
+    document.getElementById('vback').addEventListener('click', e => { if (history.length > 1) { e.preventDefault(); history.back(); } });
+    window.scrollTo(0, 0);
   }
 
   async function listAll() {
@@ -252,6 +403,7 @@
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
+            <button class="btn lectbtn" id="lectBtn" ${t.lectures.length ? '' : 'disabled'}>📚 ${t.lectures.length ? `VORLESUNG${t.lectures.length > 1 ? 'EN' : ''} (${t.lectures.length})` : 'KEINE VORLESUNG'}</button>
             <div class="nav2">
               <a class="btn ghost" href="#/lb/${n}/${prev?.id || ''}" ${prev ? '' : 'disabled'}>← ZURÜCK</a>
               <a class="btn ghost" href="#/lb/${n}/${next?.id || ''}" ${next ? '' : 'disabled'}>WEITER →</a>
@@ -279,6 +431,12 @@
     };
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
+    document.getElementById('lectBtn').onclick = async () => {
+      const lect = await getLect();
+      const items = t.lectures.map(id => lect.find(v => v.id === id)).filter(Boolean);
+      document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      openModal('lect');
+    };
     window.scrollTo(0, 0);
   }
 
@@ -296,8 +454,14 @@
     const parts = h.split('/').filter(Boolean);
     try {
       if (!parts.length) return home();
-      const needsKey = ['lb', 'zufall', 'alle'].includes(parts[0]);
+      if (parts[0] === 'privat') {
+        if (!pkey) { home(); return requirePriv(render); }
+        return parts[1] ? viewer('p', parts[1]) : privPage();
+      }
+      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
+      if (parts[0] === 'vorlesungen') return lectPage();
+      if (parts[0] === 'vorlesung' && parts[1]) return viewer('v', parts[1]);
       if (parts[0] === 'lb' && LB[parts[1]]) return parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]);
       if (parts[0] === 'zufall') return randomTask();
       if (parts[0] === 'alle') return listAll();

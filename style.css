@@ -223,3 +223,46 @@ main{max-width:1200px;margin:0 auto;padding:0 16px 40px}
 .nav2 .btn{padding:10px 6px;font-size:11px;letter-spacing:.08em}
 @media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.tile .t{font-size:12px;letter-spacing:.06em}.tile .emoji{font-size:44px}}
+
+/* ---------- Vorlesungen ---------- */
+.tiles.lbtiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tiles.lbtiles .tile{aspect-ratio:auto;min-height:220px}
+.tiles.extras{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tiles.extras .tile{aspect-ratio:auto;min-height:190px}
+.lectbox{margin:22px 0 6px;background:rgba(15,19,28,.9);border:1px solid var(--line);border-radius:var(--radius);padding:0 22px}
+.lectbox[open]{border-color:var(--accent,var(--cyan));box-shadow:0 0 22px color-mix(in srgb,var(--accent,var(--cyan)) 20%,transparent);padding-bottom:22px}
+.lectbox summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0;font-family:Orbitron,sans-serif;letter-spacing:.16em;font-size:14px;color:var(--accent,var(--cyan))}
+.lectbox summary::-webkit-details-marker{display:none}
+.lectbox summary::after{content:"▾";font-size:16px;transition:transform .2s}
+.lectbox[open] summary::after{transform:rotate(180deg)}
+.lectbox summary .cnt{margin-left:auto;font-size:11px;border:1px solid currentColor;border-radius:999px;padding:3px 10px}
+.lectbox .chips{margin-top:0}
+.cards.small{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:14px}
+.cards.small .card{padding:18px;gap:8px}
+.cards.small .card h3{font-size:15px}
+.card h3{overflow-wrap:anywhere;hyphens:auto}
+.docico{margin-right:8px}
+.empty{color:var(--muted);font-size:14px;margin:0 0 4px}
+.btn.lectbtn{border-color:#9ad8ff;background:rgba(154,216,255,.1)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.modal-box.wide{width:min(560px,100%)}
+.lectlist{display:grid;gap:10px;text-align:left;margin:6px 0}
+.lectitem{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#0a0e18;color:var(--text);text-decoration:none;transition:border-color .2s}
+.lectitem:hover{border-color:var(--cyan)}
+.lectitem span:first-child{font-size:22px}
+.lectitem b{display:block;font-weight:600}
+.lectitem small{color:var(--muted);font-size:12px}
+.lectitem .go{margin-left:auto;color:var(--cyan);font-size:18px}
+.pdfwrap{display:grid;gap:8px}
+iframe.pdf{width:100%;height:78vh;min-height:520px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.pdfhint{color:var(--muted);font-size:13px;margin:0}
+.minitasks{display:grid;gap:6px}
+.minitask{display:block;font-size:13px;color:var(--text);text-decoration:none;padding:8px 10px;border:1px solid #222a3a;border-radius:10px;line-height:1.35}
+.minitask:hover{border-color:var(--cyan)}
+.minitask b{color:var(--gold);font-weight:600;margin-right:4px}
+@media (max-width:900px){
+  .tiles.lbtiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles.extras{grid-template-columns:repeat(2,minmax(0,1fr))}
+  iframe.pdf{height:70vh;min-height:420px}
+}
+@media (max-width:520px){.lectbox{padding:0 14px}.lectbox[open]{padding-bottom:14px}}

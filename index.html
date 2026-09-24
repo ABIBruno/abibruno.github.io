@@ -46,11 +46,35 @@
   </div>
 </div>
 
+<div class="modal" id="m-priv" role="dialog" aria-modal="true" aria-labelledby="privTitle">
+  <div class="modal-box" style="border-color:#f08ad8;box-shadow:0 0 40px rgba(240,138,216,.25)">
+    <div class="modal-icon">🗝️</div>
+    <h2 id="privTitle" style="color:#f08ad8">PRIVAT</h2>
+    <p>Dieser Bereich hat ein eigenes Passwort.</p>
+    <form id="privForm" autocomplete="off">
+      <input type="password" id="ppw" placeholder="Privat-Passwort" aria-label="Privat-Passwort" required>
+      <button type="submit" class="btn" id="ppwBtn">ÖFFNEN</button>
+    </form>
+    <p class="err" id="ppwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
+    <button class="btn ghost" data-close>ABBRECHEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-lect" role="dialog" aria-modal="true" aria-labelledby="lectTitle">
+  <div class="modal-box wide">
+    <div class="modal-icon">📚</div>
+    <h2 id="lectTitle">PASSENDE VORLESUNGEN</h2>
+    <div id="lectList" class="lectlist"></div>
+    <button class="btn ghost" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
 <div class="modal" id="m-about" role="dialog" aria-modal="true">
   <div class="modal-box">
     <div class="modal-icon">🎓</div>
     <h2>ÜBER ABIDASMUSS</h2>
     <p>Alle 66 Aufgaben der sächsischen VBWL-Abiturprüfungen (Leistungskurs, 2017–2024) – sortiert nach den sechs Lernbereichen, jeweils mit ausformulierter Lösung, Rechenweg und Kontrollvermerk.</p>
+    <p>Zu jeder Aufgabe führt der Button „📚 Vorlesungen“ direkt zu den passenden Unterrichtsfolien. Alle Vorlesungen findest du auch unter „Vorlesungen“ oder im Kasten auf der Seite des jeweiligen Lernbereichs.</p>
     <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
