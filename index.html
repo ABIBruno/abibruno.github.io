@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABIdasmuss | VBWL-Abiturtrainer</title>
+<meta name="description" content="VBWL-Abiturprüfungen 2017–2024 nach Lernbereichen – Aufgaben und ausführliche Lösungen.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<header class="topbar">
+  <button class="pill" data-open="about"><span class="ico">ⓘ</span> ABOUT</button>
+  <div class="topbar-right">
+    <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
+    <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="footer">
+  <span>© 2026 ABIDASMUSS</span>
+  <button class="link" data-open="about">ÜBER DIE SEITE</button>
+  <button class="link" data-open="hinweis">HINWEIS</button>
+</footer>
+
+<!-- Modals -->
+<div class="modal" id="m-lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <h2 id="lockTitle">LABOR GESPERRT</h2>
+    <p>Die Aufgaben und Lösungen sind verschlüsselt. Gib das Passwort ein, um alle Lernbereiche freizuschalten.</p>
+    <form id="lockForm" autocomplete="off">
+      <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort" required>
+      <button type="submit" class="btn" id="pwBtn">ENTSPERREN</button>
+    </form>
+    <p class="err" id="pwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
+    <button class="btn ghost" data-close>ABBRECHEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-about" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">🎓</div>
+    <h2>ÜBER ABIDASMUSS</h2>
+    <p>Alle 66 Aufgaben der sächsischen VBWL-Abiturprüfungen (Leistungskurs, 2017–2024) – sortiert nach den sechs Lernbereichen, jeweils mit ausformulierter Lösung, Rechenweg und Kontrollvermerk.</p>
+    <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-hinweis" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">⚖️</div>
+    <h2>HINWEIS</h2>
+    <p>Private Lernseite zur Abiturvorbereitung. Die Aufgabenstellungen stammen aus den Abiturprüfungen des Freistaates Sachsen; die Rechte liegen beim jeweiligen Urheber. Die Inhalte sind passwortgeschützt und nur für den persönlichen Gebrauch bestimmt. Alle Lösungen ohne Gewähr.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<script src="data/meta.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
