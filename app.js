@@ -26,8 +26,6 @@
     set(s, k, v) { try { window[s].setItem(k, v); } catch {} },
     del(s, k) { try { window[s].removeItem(k); } catch {} },
   };
-  const doneSet = () => { try { return new Set(JSON.parse(store.get('localStorage', 'abi-done') || '[]')); } catch { return new Set(); } };
-  const toggleDone = id => { const s = doneSet(); s.has(id) ? s.delete(id) : s.add(id); store.set('localStorage', 'abi-done', JSON.stringify([...s])); return s.has(id); };
 
   /* ---------- Krypto ---------- */
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -137,14 +135,13 @@
   const label = t => `Abiturprüfung ${t.year} · ${PART[t.part]} · Aufgabe ${t.nr}`;
   const plain = html => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent || ''; };
 
-  function cardHTML(t, lbn, done) {
+  function cardHTML(t, lbn) {
     const acc = LB[lbn].accent;
-    return `<a class="card${done.has(t.id) ? ' done' : ''}" style="--accent:${acc}" href="#/lb/${lbn}/${t.id}">
+    return `<a class="card" style="--accent:${acc}" href="#/lb/${lbn}/${t.id}">
       <div class="top">
         <span class="badge year">${t.year}</span>
         <span class="badge part">${PART[t.part]} · ${esc(t.nr)}</span>
         <span class="badge be">${t.be} BE</span>
-        ${done.has(t.id) ? '<span class="donemark">✓ ERLEDIGT</span>' : ''}
       </div>
       <h3>${twoTone(t.topic)}</h3>
       <p>LB${lbn} · ${esc(LB[lbn].name)} · ${label(t)}</p>
@@ -153,7 +150,6 @@
 
   /* ---------- Seiten ---------- */
   function home() {
-    const done = doneSet();
     const tiles = Object.entries(LB).map(([n, l]) => `
       <a class="tile" style="--accent:${l.accent}" href="#/lb/${n}">
         <span class="lbtag">LB${n}</span>
@@ -177,7 +173,6 @@
         ${tiles}
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">66 Aufgaben</span></a>
-        <a class="tile" href="#/erledigt"><span class="emoji">✅</span><span class="t">Fortschritt</span><span class="s">${done.size} / 66 erledigt</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -191,11 +186,10 @@
     term = term.trim().toLowerCase();
     if (term.length < 2) { box.innerHTML = ''; return; }
     const all = await getAll();
-    const done = doneSet();
     const hits = [];
     all.forEach((lb, i) => lb.tasks.forEach(t => {
       if (!t._txt) t._txt = (t.topic + ' ' + t.year + ' ' + t.nr + ' ' + plain(t.task)).toLowerCase();
-      if (t._txt.includes(term)) hits.push(cardHTML(t, i + 1, done));
+      if (t._txt.includes(term)) hits.push(cardHTML(t, i + 1));
     }));
     box.innerHTML = hits.length
       ? `<div class="cards" style="margin-top:6px">${hits.slice(0, 30).join('')}</div>`
@@ -213,32 +207,28 @@
     const l = LB[n];
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const data = await getLB(n);
-    const done = doneSet();
     const tasks = applyFilter(data.tasks, filter);
-    const nDone = data.tasks.filter(t => done.has(t.id)).length;
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben · ${nDone} erledigt</div></div></div>
+        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben</div></div></div>
       ${chipsHTML(data.tasks, filter)}
-      <div class="cards">${tasks.map(t => cardHTML(t, n, done)).join('')}</div>`;
+      <div class="cards">${tasks.map(t => cardHTML(t, n)).join('')}</div>`;
     app.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f)));
   }
 
-  async function listAll(onlyDone) {
+  async function listAll() {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const all = await getAll();
-    const done = doneSet();
     let html = '';
     all.forEach((lb, i) => {
-      const ts = onlyDone ? lb.tasks.filter(t => done.has(t.id)) : lb.tasks;
-      if (!ts.length) return;
+      const ts = lb.tasks;
       html += `<div class="sechead"><h2 style="color:${LB[i + 1].accent}">LB${i + 1} <span>·</span> ${esc(LB[i + 1].name.toUpperCase())}</h2></div>
-               <div class="cards">${ts.map(t => cardHTML(t, i + 1, done)).join('')}</div>`;
+               <div class="cards">${ts.map(t => cardHTML(t, i + 1)).join('')}</div>`;
     });
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>${onlyDone ? 'Fortschritt' : 'Alle Aufgaben'}</h1><div class="meta">${done.size} von 66 Aufgaben erledigt</div></div></div>
-      ${html || '<p class="loading">Noch nichts erledigt – öffne eine Aufgabe und markiere sie als erledigt.</p>'}`;
+        <div><h1>Alle Aufgaben</h1><div class="meta">66 Aufgaben aus 8 Prüfungsjahren</div></div></div>
+      ${html}`;
   }
 
   async function taskPage(n, id) {
@@ -247,7 +237,6 @@
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
-    const isDone = doneSet().has(t.id);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/lb/${n}" aria-label="Zurück">←</a>
         <div><h1>${esc(t.topic)}</h1><div class="meta">LB${n} · ${esc(LB[n].name)} · ${label(t)}</div></div></div>
@@ -263,7 +252,6 @@
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
-            <button class="btn ${isDone ? 'green' : 'ghost'}" id="doneBtn">${isDone ? '✓ ERLEDIGT' : 'ALS ERLEDIGT MARKIEREN'}</button>
             <div class="nav2">
               <a class="btn ghost" href="#/lb/${n}/${prev?.id || ''}" ${prev ? '' : 'disabled'}>← ZURÜCK</a>
               <a class="btn ghost" href="#/lb/${n}/${next?.id || ''}" ${next ? '' : 'disabled'}>WEITER →</a>
@@ -291,11 +279,6 @@
     };
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
-    document.getElementById('doneBtn').onclick = e => {
-      const on = toggleDone(t.id);
-      e.target.textContent = on ? '✓ ERLEDIGT' : 'ALS ERLEDIGT MARKIEREN';
-      e.target.className = 'btn ' + (on ? 'green' : 'ghost');
-    };
     window.scrollTo(0, 0);
   }
 
@@ -313,12 +296,11 @@
     const parts = h.split('/').filter(Boolean);
     try {
       if (!parts.length) return home();
-      const needsKey = ['lb', 'zufall', 'alle', 'erledigt'].includes(parts[0]);
+      const needsKey = ['lb', 'zufall', 'alle'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
       if (parts[0] === 'lb' && LB[parts[1]]) return parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]);
       if (parts[0] === 'zufall') return randomTask();
-      if (parts[0] === 'alle') return listAll(false);
-      if (parts[0] === 'erledigt') return listAll(true);
+      if (parts[0] === 'alle') return listAll();
       location.hash = '#/';
     } catch (err) {
       console.error(err);

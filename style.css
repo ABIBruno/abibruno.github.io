@@ -124,8 +124,6 @@ main{max-width:1200px;margin:0 auto;padding:0 16px 40px}
 .card h3{font-family:Orbitron,sans-serif;font-size:17px;letter-spacing:.03em;margin:0;line-height:1.35}
 .card h3 .hl{color:var(--cyan)}
 .card p{margin:0;color:var(--muted);font-size:14px}
-.card.done{border-color:rgba(91,227,161,.4)}
-.card .donemark{margin-left:auto;color:var(--green);font-size:12px;font-family:Orbitron,sans-serif;letter-spacing:.08em}
 
 /* ---------- Task page ---------- */
 .task-layout{display:grid;grid-template-columns:260px 1fr;gap:26px;margin-top:22px;align-items:start}
