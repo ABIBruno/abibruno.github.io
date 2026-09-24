@@ -434,7 +434,13 @@
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
       const items = t.lectures.map(id => lect.find(v => v.id === id)).filter(Boolean);
-      document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      let html = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      if (pkey) {
+        const zf = (await getPriv()).filter(z => (z.lect || []).some(id => t.lectures.includes(id)));
+        if (zf.length) html += `<div class="privhead">🔐 PRIVAT · ZUSAMMENFASSUNGEN</div>` +
+          zf.map(z => `<a class="lectitem priv" href="#/privat/${z.id}" data-close><span>🗝️</span><span><b>${esc(z.title)}</b><small>LB${z.lb} · Zusammenfassung · ${z.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      }
+      document.getElementById('lectList').innerHTML = html;
       openModal('lect');
     };
     window.scrollTo(0, 0);
