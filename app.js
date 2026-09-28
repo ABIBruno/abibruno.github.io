@@ -201,6 +201,7 @@
   }
 
   const mb = n => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  const isNew = v => v.added && (Date.now() - new Date(v.added).getTime()) < 21 * 864e5;
   function lectCardHTML(v, kind = 'v') {
     const acc = LB[v.lb]?.accent || 'var(--cyan)';
     const href = kind === 'v' ? `#/vorlesung/${v.id}` : `#/privat/${v.id}`;
@@ -210,6 +211,7 @@
         <span class="badge" style="color:${acc};border-color:${acc}66">LB${v.lb}</span>
         ${v.topic ? `<span class="badge part">${esc(v.topic)}</span>` : ''}
         <span class="badge">${v.pages} S.</span>
+        ${isNew(v) ? '<span class="badge neu">NEU</span>' : ''}
       </div>
       <h3><span class="docico">${kind === 'v' ? '📄' : '🔐'}</span>${twoTone(v.title)}</h3>
       <p>${kind === 'v' ? (n ? `Passt zu ${n} Prüfungsaufgabe${n > 1 ? 'n' : ''}` : 'Grundlagen') : 'Zusammenfassung'} · ${mb(v.size)}</p>
@@ -324,6 +326,7 @@
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">66 Aufgaben</span></a>
         <a class="tile" style="--accent:#f08ad8" href="#/privat"><span class="lockbadge">${pkey ? '🔓' : '🔐'}</span><span class="emoji">🗝️</span><span class="t">Privat</span><span class="s">Extra-Passwort</span></a>
+        <a class="tile" style="--accent:#5be3a1" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -381,14 +384,14 @@
     const lect = await getLect();
     const inLb = lbSel === 'alle' ? lect : lect.filter(v => String(v.lb) === String(lbSel));
     const shown = topic === 'alle' ? inLb : inLb.filter(v => v.topic === topic);
-    const lbs = [...new Set(lect.map(v => v.lb))];
+    const lbs = [...new Set(lect.map(v => v.lb))].sort();
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
         <div><h1>Vorlesungen</h1><div class="meta">${lect.length} Vorlesungen aus dem Unterricht · nach Lernbereich und Thema filtern</div></div></div>
       <div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE LB' : 'LB' + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
       ${lbSel === 'alle' ? '' : topicChips(inLb, topic)}
       <div class="cards">${shown.map(v => lectCardHTML(v)).join('')}</div>
-      <p class="empty" style="margin-top:22px">Für LB6 (Geldpolitik) gibt es noch keine Vorlesungen.</p>`;
+      ${lbs.includes(6) ? '' : '<p class="empty" style="margin-top:22px">Für LB6 (Geldpolitik) gibt es noch keine Vorlesungen.</p>'}`;
     app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => lectPage(c.dataset.lb, 'alle')));
     app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => lectPage(lbSel, c.dataset.topic)));
   }
@@ -461,10 +464,11 @@
 
   async function taskPage(n, id) {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
-    const data = await getLB(n);
+    const [data, lectAll] = await Promise.all([getLB(n), getLect()]);
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
+    const tl = [...new Set([...(t.lectures || []), ...lectAll.filter(v => (v.tasks || []).includes(t.id)).map(v => v.id)])];
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/lb/${n}" aria-label="Zurück">←</a>
         <div><h1>${esc(t.topic)}</h1><div class="meta">LB${n} · ${esc(LB[n].name)} · ${label(t)}</div></div></div>
@@ -482,7 +486,7 @@
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
-            <button class="btn lectbtn" id="lectBtn" ${t.lectures.length ? '' : 'disabled'}>📚 ${t.lectures.length ? `VORLESUNG${t.lectures.length > 1 ? 'EN' : ''} (${t.lectures.length})` : 'KEINE VORLESUNG'}</button>
+            <button class="btn lectbtn" id="lectBtn" ${tl.length ? '' : 'disabled'}>📚 ${tl.length ? `VORLESUNG${tl.length > 1 ? 'EN' : ''} (${tl.length})` : 'KEINE VORLESUNG'}</button>
             <div class="nav2">
               <a class="btn ghost" href="#/lb/${n}/${prev?.id || ''}" ${prev ? '' : 'disabled'}>← ZURÜCK</a>
               <a class="btn ghost" href="#/lb/${n}/${next?.id || ''}" ${next ? '' : 'disabled'}>WEITER →</a>
@@ -513,10 +517,10 @@
     bindTimer(t.id);
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
-      const items = t.lectures.map(id => lect.find(v => v.id === id)).filter(Boolean);
-      let html = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      const items = tl.map(id => lect.find(v => v.id === id)).filter(Boolean);
+      let html = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}${isNew(v) ? ' <em class="neu">NEU</em>' : ''}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
       if (pkey) {
-        const zf = (await getPriv()).filter(z => (z.lect || []).some(id => t.lectures.includes(id)));
+        const zf = (await getPriv()).filter(z => (z.lect || []).some(id => tl.includes(id)));
         if (zf.length) html += `<div class="privhead">🔐 PRIVAT · ZUSAMMENFASSUNGEN</div>` +
           zf.map(z => `<a class="lectitem priv" href="#/privat/${z.id}" data-close><span>🗝️</span><span><b>${esc(z.title)}</b><small>LB${z.lb} · Zusammenfassung · ${z.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
       }
@@ -524,6 +528,92 @@
       openModal('lect');
     };
     window.scrollTo(0, 0);
+  }
+
+  /* ---------- Upload (Lehrkräfte) ---------- */
+  const UPLOAD = window.__UPLOAD || '';
+  function uploadPage() {
+    const code = store.get('localStorage', 'abi-upcode') || '';
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Vorlesung hochladen</h1><div class="meta">Für Lehrkräfte · PDFs werden automatisch eingeordnet, verschlüsselt und veröffentlicht</div></div></div>
+      ${UPLOAD ? '' : '<p class="empty" style="margin:18px 0">⚠️ Der Upload-Dienst ist noch nicht eingerichtet.</p>'}
+      <div class="uplayout">
+        <section class="panel">
+          <h2 style="color:var(--green)">⬆️ HOCHLADEN</h2>
+          <label class="fld"><span>Upload-Code</span>
+            <input id="upcode" type="password" autocomplete="off" value="${esc(code)}" placeholder="Code vom Seitenbetreiber"></label>
+          <label class="fld"><span>Lernbereich</span>
+            <select id="uplb"><option value="0">Automatisch erkennen</option>${Object.entries(LB).map(([n, l]) => `<option value="${n}">LB${n} · ${esc(plain(l.name))}</option>`).join('')}</select></label>
+          <label class="drop" id="drop">
+            <input type="file" id="upfile" accept="application/pdf,.pdf" multiple hidden>
+            <span class="dropico">📄</span>
+            <b>PDF hierher ziehen</b><small>oder klicken zum Auswählen · max. 25 MB · mehrere möglich</small>
+          </label>
+          <div id="uplist" class="uplist"></div>
+        </section>
+        <aside class="panel uphelp">
+          <h2>ℹ️ SO FUNKTIONIERT'S</h2>
+          <ol>
+            <li>Upload-Code eingeben (wird im Browser gemerkt).</li>
+            <li>PDF auswählen – den Lernbereich kannst du angeben oder erkennen lassen.</li>
+            <li>Die Datei wird automatisch gelesen und einem <b>Lernbereich</b>, einem <b>Thema</b> und passenden <b>Prüfungsaufgaben</b> zugeordnet.</li>
+            <li>Nach ca. 1–2 Minuten erscheint hier das Ergebnis – und die Vorlesung ist auf der Seite.</li>
+          </ol>
+          <p class="empty">Tipp: Aussagekräftige Dateinamen (z. B. „Preisbildung am Markt.pdf“) werden als Titel verwendet.</p>
+        </aside>
+      </div>`;
+    const input = document.getElementById('upfile'), drop = document.getElementById('drop');
+    input.onchange = () => { handle([...input.files]); input.value = ''; };
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => handle([...e.dataTransfer.files]));
+  }
+  function b64file(file) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
+  }
+  async function handle(files) {
+    const code = document.getElementById('upcode').value.trim();
+    const lb = document.getElementById('uplb').value;
+    const list = document.getElementById('uplist');
+    if (!UPLOAD) { alertRow(list, 'Upload-Dienst noch nicht eingerichtet.'); return; }
+    if (!code) { alertRow(list, 'Bitte zuerst den Upload-Code eingeben.'); document.getElementById('upcode').focus(); return; }
+    store.set('localStorage', 'abi-upcode', code);
+    for (const f of files) {
+      const row = document.createElement('div'); row.className = 'uprow';
+      row.innerHTML = `<span class="upico">📄</span><div><b>${esc(f.name)}</b><small class="upst">Wird hochgeladen …</small></div>`;
+      list.prepend(row);
+      const st = row.querySelector('.upst');
+      const fail = m => { row.classList.add('err'); st.textContent = '❌ ' + m; };
+      if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { fail('Nur PDF-Dateien sind erlaubt.'); continue; }
+      if (f.size > 25 * 1048576) { fail('Datei ist größer als 25 MB.'); continue; }
+      try {
+        const body = await b64file(f);
+        const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
+        const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
+        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode'); continue; }
+        row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
+        poll(j.name, code, row, st);
+      } catch (e) { fail('Keine Verbindung zum Upload-Dienst.'); }
+    }
+  }
+  function alertRow(list, msg) { const d = document.createElement('div'); d.className = 'uprow err'; d.innerHTML = `<span class="upico">⚠️</span><div><b>${esc(msg)}</b></div>`; list.prepend(d); }
+  async function poll(name, code, row, st, tries = 0) {
+    if (!document.body.contains(row)) return;
+    if (tries > 60) { st.textContent = '⌛ Dauert länger als erwartet – das Ergebnis kommt als Meldung per E-Mail an den Seitenbetreiber.'; return; }
+    try {
+      const r = await fetch(UPLOAD + '/status?name=' + encodeURIComponent(name), { headers: { 'X-Upload-Code': code } });
+      const j = await r.json();
+      if (j.ok && !j.pending) {
+        const x = j.result; row.classList.remove('wait');
+        if (x.status === 'ok') {
+          row.classList.add('ok');
+          st.innerHTML = `✅ Veröffentlicht als <b>LB${x.lb} · ${esc(x.thema)}</b>` + (x.aufgaben && x.aufgaben.length ? `<br>Passt zu: ${x.aufgaben.map(esc).join(' · ')}` : '<br>Keine passenden Prüfungsaufgaben gefunden.') + '<br><span class="upnote">Kann bis zu 10 Minuten dauern, bis sie bei allen erscheint.</span>';
+        } else { row.classList.add('err'); st.textContent = '❌ ' + (x.fehler || 'Konnte nicht verarbeitet werden.'); }
+        return;
+      }
+    } catch {}
+    setTimeout(() => poll(name, code, row, st, tries + 1), 5000);
   }
 
   async function randomTask() {
@@ -540,6 +630,7 @@
     const parts = h.split('/').filter(Boolean);
     try {
       if (!parts.length) return home();
+      if (parts[0] === 'upload') return uploadPage();
       if (parts[0] === 'privat') {
         if (!pkey) { home(); return requirePriv(render); }
         return parts[1] ? viewer('p', parts[1]) : privPage();
