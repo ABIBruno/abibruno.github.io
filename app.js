@@ -127,6 +127,7 @@
   lockBtn.addEventListener('click', () => {
     if (key || pkey) {
       key = null; pkey = null; lectCache = null; privCache = null;
+      for (const k in timers) delete timers[k]; activeTimer = null;
       for (const k in cache) delete cache[k];
       for (const k in blobCache) { URL.revokeObjectURL(blobCache[k]); delete blobCache[k]; }
       store.del('sessionStorage', 'abi-key'); store.del('sessionStorage', 'abi-pkey'); updateLockBtn();
@@ -192,7 +193,7 @@
       <div class="top">
         <span class="badge year">${t.year}</span>
         <span class="badge part">${PART[t.part]} · ${esc(t.nr)}</span>
-        <span class="badge be">${t.be} BE</span>
+        <span class="badge be">${t.be} BE · ⏱ ${t.minutes || t.be * 3} min</span>
       </div>
       <h3>${twoTone(t.topic)}</h3>
       <p>LB${lbn} · ${esc(LB[lbn].name)} · ${label(t)}</p>
@@ -217,6 +218,82 @@
   function topicChips(list, active, attr = 'data-topic') {
     const topics = [...new Set(list.map(v => v.topic))];
     return `<div class="chips">${['alle', ...topics].map(o => `<button class="chip${o === active ? ' on' : ''}" ${attr}="${esc(o)}">${o === 'alle' ? 'ALLE THEMEN' : esc(o.toUpperCase())}</button>`).join('')}</div>`;
+  }
+
+  /* ---------- Timer ---------- */
+  const timers = {};          // id -> { acc, start, total, lb, label, beeped }
+  let activeTimer = null;     // id des zuletzt gestarteten Timers
+  const fmt = ms => { const neg = ms < 0; ms = Math.abs(ms); const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    return (neg ? '+' : '') + (h ? h + ':' + String(m).padStart(2, '0') : String(m).padStart(2, '0')) + ':' + String(sec).padStart(2, '0'); };
+  const elapsed = tm => tm.acc + (tm.start ? Date.now() - tm.start : 0);
+  function beep() {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      [0, .35, .7].forEach(d => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(.0001, ac.currentTime + d); g.gain.exponentialRampToValueAtTime(.25, ac.currentTime + d + .02); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d + .25);
+        o.start(ac.currentTime + d); o.stop(ac.currentTime + d + .3); });
+    } catch {}
+  }
+  const pill = document.createElement('a');
+  pill.className = 'timerpill'; pill.hidden = true;
+  document.body.appendChild(pill);
+  function tick() {
+    for (const id in timers) {
+      const tm = timers[id], el = elapsed(tm), left = tm.total - el, over = left < 0;
+      if (over && tm.start && !tm.beeped) { tm.beeped = true; beep(); }
+      const box = document.querySelector(`.timer[data-id="${id}"]`);
+      if (box) {
+        box.querySelector('.tdisp').textContent = fmt(over ? left : left + 999);
+        box.classList.toggle('over', over); box.classList.toggle('running', !!tm.start);
+        box.querySelector('.tbar i').style.width = Math.min(100, el / tm.total * 100) + '%';
+        box.querySelector('.tstart').textContent = tm.start ? '❚❚ PAUSE' : (el ? '▶ WEITER' : '▶ START');
+        box.querySelector('.tstate').textContent = over ? 'Zeit abgelaufen – Überzeit' : tm.start ? 'läuft …' : el ? 'pausiert' : 'bereit';
+        const min = el / 60000;
+        box.querySelectorAll('.plan li').forEach(li => {
+          const a = +li.dataset.a, e = +li.dataset.e;
+          li.classList.toggle('done', min >= e); li.classList.toggle('now', min >= a && min < e);
+        });
+      }
+    }
+    const tm = activeTimer && timers[activeTimer];
+    const onPage = activeTimer && document.querySelector(`.timer[data-id="${activeTimer}"]`);
+    if (tm && tm.start && !(onPage && onPage.dataset.visible === '1')) {
+      const left = tm.total - elapsed(tm);
+      pill.hidden = false; pill.href = `#/lb/${tm.lb}/${activeTimer}`;
+      pill.classList.toggle('over', left < 0);
+      pill.innerHTML = `<span>⏱</span><b>${fmt(left < 0 ? left : left + 999)}</b><small>${esc(tm.label)}</small>`;
+    } else pill.hidden = true;
+  }
+  setInterval(tick, 250);
+
+  function timerHTML(t, lbn) {
+    if (!timers[t.id]) timers[t.id] = { acc: 0, start: null, total: t.minutes * 60000, lb: lbn, label: `${t.year} · ${t.nr}`, beeped: false };
+    let a = 0;
+    const plan = (t.plan || []).map(([nr, be, mins]) => { const li = `<li data-a="${a}" data-e="${a + mins}"><span class="pnr">${esc(nr)}</span><span class="pbe">${be} BE</span><span class="pmin">${mins} min</span><span class="pto">bis ${a + mins}′</span></li>`; a += mins; return li; }).join('');
+    return `<div class="box timer" data-id="${t.id}">
+      <div class="lbl">⏱ Prüfungs-Timer</div>
+      <div class="tdisp">${fmt(t.minutes * 60000 + 999)}</div>
+      <div class="tstate">bereit</div>
+      <div class="tbar"><i></i></div>
+      <div class="tbtns"><button class="btn tstart">▶ START</button><button class="btn ghost treset" title="Zurücksetzen">↺</button></div>
+      <p class="tnote">${t.be} BE × 3 min = <b>${t.minutes} min</b> · so viel Zeit hast du in der echten Prüfung (ohne Lese- und Auswahlzeit).</p>
+      ${plan ? `<details class="planbox" open><summary>Zeitplan Teilaufgaben</summary><ol class="plan">${plan}</ol></details>` : ''}
+    </div>`;
+  }
+  function bindTimer(id) {
+    const box = document.querySelector(`.timer[data-id="${id}"]`); if (!box) return;
+    const tm = timers[id];
+    box.querySelector('.tstart').onclick = () => {
+      if (tm.start) { tm.acc += Date.now() - tm.start; tm.start = null; }
+      else {
+        for (const o in timers) if (o !== id && timers[o].start) { timers[o].acc += Date.now() - timers[o].start; timers[o].start = null; }
+        tm.start = Date.now(); activeTimer = id;
+      }
+      tick();
+    };
+    box.querySelector('.treset').onclick = () => { tm.acc = 0; tm.start = null; tm.beeped = false; tick(); };
+    if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => { box.dataset.visible = e.isIntersecting ? '1' : '0'; tick(); })).observe(box);
+    tick();
   }
 
   /* ---------- Seiten ---------- */
@@ -399,7 +476,9 @@
             <div class="kv"><span>Teil</span><b>${PART[t.part]}</b></div>
             <div class="kv"><span>Aufgabe</span><b>${esc(t.nr)}</b></div>
             <div class="kv"><span>Punkte</span><b>${t.be} BE</b></div>
+            <div class="kv"><span>Zeit</span><b>${t.minutes} min</b></div>
           </div>
+          ${timerHTML(t, n)}
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
@@ -431,6 +510,7 @@
     };
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
+    bindTimer(t.id);
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
       const items = t.lectures.map(id => lect.find(v => v.id === id)).filter(Boolean);
