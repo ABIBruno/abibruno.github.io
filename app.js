@@ -643,6 +643,7 @@
         const x = j.result; row.classList.remove('wait');
         if (x.status === 'ok') {
           row.classList.add('ok');
+          if (x.duplikat) st.innerHTML = `♻️ <b>Schon vorhanden</b> – diese Datei ist bereits auf der Seite (${esc(x.titel || '')}, LB${x.lb}) und wurde nicht doppelt eingetragen.`; else
           st.innerHTML = `✅ Veröffentlicht als <b>LB${x.lb} · ${esc(x.thema)}</b>` + (x.aufgaben && x.aufgaben.length ? `<br>Passt zu: ${x.aufgaben.map(esc).join(' · ')}` : '<br>Keine passenden Prüfungsaufgaben gefunden.') + '<br><span class="upnote">Kann bis zu 10 Minuten dauern, bis sie bei allen erscheint.</span>';
         } else { row.classList.add('err'); st.textContent = '❌ ' + (x.fehler || 'Konnte nicht verarbeitet werden.'); }
         return;
