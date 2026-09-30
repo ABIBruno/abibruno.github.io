@@ -340,3 +340,32 @@ em.neu{font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.12em;paddin
 .uphelp ol{padding-left:20px;margin:0 0 12px;display:grid;gap:8px;font-size:14px}
 .uphelp h2{color:var(--cyan)}
 @media (max-width:900px){.uplayout{grid-template-columns:1fr}.tiles.extras{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---------- BAB / Rechentabellen ---------- */
+.content h3.sub{font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.16em;color:var(--cyan);margin:22px 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.content h3.sub:first-child{margin-top:0}
+.content .be{font-family:Inter,sans-serif;font-size:11px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;border:1px solid var(--gold);color:var(--gold)}
+.content .step{font-size:15px}
+.content .note{font-size:13.5px;color:var(--muted)}
+.content ul.auftrag{margin:8px 0 4px}.content ul.auftrag li{margin:3px 0}
+.tblwrap{overflow-x:auto;margin:10px 0 16px;border-radius:12px;border:1px solid #2b3446;-webkit-overflow-scrolling:touch}
+.content .tblwrap table.bab{display:table;margin:0;min-width:760px;font-size:13.5px;font-variant-numeric:tabular-nums;border-style:hidden}
+.content .tblwrap table.kalk{min-width:520px}
+.content table.bab th{background:#16213a;color:#dfe8ff;text-align:right;font-size:12px;line-height:1.35;white-space:nowrap}
+.content table.bab thead tr:first-child th{color:var(--muted);font-weight:500;text-align:center;font-size:11px;letter-spacing:.05em}
+.content table.bab th:first-child{text-align:left}
+.content table.bab td{text-align:right;white-space:nowrap;padding:7px 10px}
+.content table.bab td.lbl{text-align:left;white-space:normal;min-width:150px;color:#e6ecff;position:sticky;left:0;background:#0d1322;z-index:1}
+.content table.bab td small,.content table.bab th small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.content table.bab tr.sum td{background:rgba(120,160,255,.08)}
+.content table.bab tr.sum td.lbl{background:#121c33}
+.content table.bab tr.uml td{color:#b9c6e6}
+.content table.bab tr.total td{background:rgba(255,200,90,.12);font-weight:700;color:#fff;border-top:2px solid rgba(255,200,90,.55)}
+.content table.bab tr.total td.lbl{background:#2a2616}
+.content table.bab tr.res td{background:rgba(91,227,161,.08);font-weight:600}
+.content table.bab tr.res td.lbl{background:#0f2420}
+.content table.bab .neg{color:#ff8a9a}.content table.bab .pos{color:#5be3a1}
+.info.tip{background:rgba(255,200,90,.07);border-color:rgba(255,200,90,.4)}
+.task-layout{grid-template-columns:260px minmax(0,1fr)}
+.task-layout>*{min-width:0}
+@media (max-width:900px){.task-layout{grid-template-columns:minmax(0,1fr)}}
