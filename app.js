@@ -6,12 +6,12 @@
 
   const META = window.__META;
   const LB = {
-    1: { name: 'Beschaffung', full: 'Beschaffung von Produktionsfaktoren', emoji: '📦', accent: '#38d6ff' },
-    2: { name: 'Leistungs\u00ADerstellung', full: 'Leistungserstellung (Kosten- und Leistungsrechnung)', emoji: '🏭', accent: '#ffd24a' },
-    3: { name: 'Marketing', full: 'Marketing', emoji: '📣', accent: '#f08ad8' },
-    4: { name: 'Finanzie\u00ADrung', full: 'Finanzierungsprozesse im Unternehmen', emoji: '💰', accent: '#5be3a1' },
-    5: { name: 'Wirtschafts\u00ADpolitik', full: 'Wirtschaftspolitisches Handeln des Staates / Markt und Preis', emoji: '🏛️', accent: '#ff9f5a' },
-    6: { name: 'Geldpolitik', full: 'Geldtheorie und Geldpolitik', emoji: '🏦', accent: '#b58cff' },
+    1: { name: 'Beschaffung', full: 'Beschaffung von Produktionsfaktoren', emoji: '📦', accent: 'var(--lb1)' },
+    2: { name: 'Leistungs\u00ADerstellung', full: 'Leistungserstellung (Kosten- und Leistungsrechnung)', emoji: '🏭', accent: 'var(--lb2)' },
+    3: { name: 'Marketing', full: 'Marketing', emoji: '📣', accent: 'var(--lb3)' },
+    4: { name: 'Finanzie\u00ADrung', full: 'Finanzierungsprozesse im Unternehmen', emoji: '💰', accent: 'var(--lb4)' },
+    5: { name: 'Wirtschafts\u00ADpolitik', full: 'Wirtschaftspolitisches Handeln des Staates / Markt und Preis', emoji: '🏛️', accent: 'var(--lb5)' },
+    6: { name: 'Geldpolitik', full: 'Geldtheorie und Geldpolitik', emoji: '🏦', accent: 'var(--lb6)' },
   };
   const PART = { A: 'Teil A', B: 'Teil B', Alt: 'Altformat' };
 
@@ -177,6 +177,19 @@
     }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+  /* ---------- Hell/Dunkel ---------- */
+  const themeBtn = document.getElementById('themeBtn');
+  function setTheme(t, save) {
+    document.documentElement.dataset.theme = t;
+    themeBtn.textContent = t === 'light' ? '🌙' : '☀️';
+    themeBtn.title = t === 'light' ? 'Dunkler Modus' : 'Heller Modus';
+    themeBtn.setAttribute('aria-label', themeBtn.title);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'light' ? '#f4f6fb' : '#05070f');
+    if (save) try { localStorage.setItem('abi-theme', t); } catch (e) {}
+  }
+  setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
+  themeBtn.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true));
+
   document.getElementById('fsBtn').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.();
   });
@@ -208,7 +221,7 @@
     const n = v.tasks ? v.tasks.length : 0;
     return `<a class="card lect" style="--accent:${acc}" href="${href}">
       <div class="top">
-        <span class="badge" style="color:${acc};border-color:${acc}66">LB${v.lb}</span>
+        <span class="badge" style="color:${acc};border-color:color-mix(in srgb,${acc} 40%,transparent)">LB${v.lb}</span>
         ${v.topic ? `<span class="badge part">${esc(v.topic)}</span>` : ''}
         <span class="badge">${v.pages} S.</span>
         ${isNew(v) ? '<span class="badge neu">NEU</span>' : ''}
@@ -322,11 +335,11 @@
       <div class="tiles lbtiles">${tiles}</div>
       <div class="sechead"><h2>EXTRAS</h2></div>
       <div class="tiles extras">
-        <a class="tile" style="--accent:#9ad8ff" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Vorlesungen</span><span class="s">Nach Thema filtern</span></a>
+        <a class="tile" style="--accent:var(--sky)" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Vorlesungen</span><span class="s">Nach Thema filtern</span></a>
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">66 Aufgaben</span></a>
-        <a class="tile" style="--accent:#f08ad8" href="#/privat"><span class="lockbadge">${pkey ? '🔓' : '🔐'}</span><span class="emoji">🗝️</span><span class="t">Privat</span><span class="s">Extra-Passwort</span></a>
-        <a class="tile" style="--accent:#5be3a1" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
+        <a class="tile" style="--accent:var(--pink)" href="#/privat"><span class="lockbadge">${pkey ? '🔓' : '🔐'}</span><span class="emoji">🗝️</span><span class="t">Privat</span><span class="s">Extra-Passwort</span></a>
+        <a class="tile" style="--accent:var(--green)" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
