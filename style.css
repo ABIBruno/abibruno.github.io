@@ -455,15 +455,13 @@ html.custombg[data-theme="light"] #stars{display:none}
 .bgact .btn{min-width:150px}
 @media (max-width:520px){.bggrid,.bgrow{gap:2px}.sw{aspect-ratio:1;border-radius:3px}}
 
-/* ---------- Schriftfarbe ---------- */
-html.customfg,html.customfg[data-theme]{--text:var(--userfg)}
-html.customfg .content strong,html.customfg .content table.bab td.lbl,html.customfg .content table.bab tr.total td,
-html.customfg .content table.bab th,html.customfg .btn{color:var(--userfg)}
+/* ---------- Schriftfarbe = Überschriften & Beschriftungen (Aufgaben-/Lösungstext bleibt) ---------- */
+html.customfg :is(.brand,.pagehead h1,.card h3 .hl,.card h3){background:none!important;-webkit-text-fill-color:var(--userfg)!important;color:var(--userfg)!important;filter:none!important;text-shadow:none!important}
+html.customfg :is(.subtitle,.sechead h2,.sechead h2 span,.sechead h2 b,.tile .t,.side .lbl,.panel h2,.modal-box h2,.content h3.sub,.lectbox summary,.planbox summary,.fld span,.privhead,.upbox h2){color:var(--userfg)!important;text-shadow:none!important}
 .bgtabs{display:flex;gap:6px;justify-content:center;margin:2px 0 4px}
 .bgtab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 16px;font-size:14px;color:var(--muted)}
 .bgtab.on{border-color:var(--cyan);color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent)}
 .fgprev{border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:15px;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .fgprev b{font-size:12px;white-space:nowrap;padding:2px 8px;border-radius:999px;background:rgba(127,127,127,.15)}
 .fgprev b.ok{color:#1a9c62}.fgprev b.mid{color:#c98a00}.fgprev b.bad{color:#e0334a}
-html.customfg .content table.bab :is(td,th){color:var(--userfg)!important}
-html.customfg .content table.bab thead tr:first-child th{color:var(--muted)!important}
+.fgprev .fgh{font-family:Orbitron,sans-serif;letter-spacing:.14em;font-weight:700}

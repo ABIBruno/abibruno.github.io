@@ -202,10 +202,10 @@
     document.querySelectorAll('.bgtab').forEach(t => t.classList.toggle('on', t.dataset.mode === colorMode));
     document.getElementById('bgHint').textContent = colorMode === 'bg'
       ? 'Such dir eine Hintergrundfarbe aus. Hell oder dunkel stellt sich automatisch passend ein.'
-      : 'Such dir eine Schriftfarbe aus. Überschriften und Farbakzente bleiben, der normale Text ändert sich.';
+      : 'Such dir eine Farbe für Überschriften und Beschriftungen aus. Aufgaben- und Lösungstext bleiben unverändert.';
     // Lesbarkeit: Schrift gegen die Kästen (dunkel bzw. weiß)
     const panel = document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#0f131c';
-    const fg = curVar('--userfg') || (document.documentElement.dataset.theme === 'light' ? '#1b2233' : '#dfe6f3');
+    const fg = curVar('--userfg') || (document.documentElement.dataset.theme === 'light' ? '#0270a0' : '#38d6ff');
     const k = contrast(fg, panel), pv = document.getElementById('fgPreview');
     pv.style.background = panel; pv.style.color = fg;
     pv.querySelector('b').textContent = k >= 4.5 ? '✓ gut lesbar' : k >= 3 ? '~ noch lesbar' : '⚠️ schwer lesbar';
