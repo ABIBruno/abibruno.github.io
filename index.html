@@ -7,12 +7,12 @@
 <meta name="description" content="VBWL-Abiturprüfungen 2017–2024 nach Lernbereichen – Aufgaben und ausführliche Lösungen.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05070f">
-<script>try{if(localStorage.getItem('abi-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
@@ -20,6 +20,7 @@
 <header class="topbar">
   <button class="pill" data-open="about"><span class="ico">ⓘ</span> ABOUT</button>
   <div class="topbar-right">
+    <button class="round" id="bgBtn" title="Hintergrundfarbe wählen" aria-label="Hintergrundfarbe wählen">🎨</button>
     <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
     <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
     <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
@@ -72,6 +73,16 @@
   </div>
 </div>
 
+<div class="modal" id="m-bg" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
+  <div class="modal-box xwide">
+    <div class="modal-icon">🎨</div>
+    <h2 id="bgTitle">HINTERGRUNDFARBE</h2>
+    <p>Such dir eine Farbe aus der Farbtabelle aus. Hell oder dunkel stellt sich automatisch passend ein, damit die Schrift lesbar bleibt.</p>
+    <div id="bgGrid" class="bggrid"></div>
+    <div class="bgact"><button class="btn" id="bgReset">STANDARD</button><button class="btn ghost" data-close>FERTIG</button></div>
+  </div>
+</div>
+
 <div class="modal" id="m-about" role="dialog" aria-modal="true">
   <div class="modal-box">
     <div class="modal-icon">🎓</div>
@@ -93,8 +104,8 @@
   </div>
 </div>
 
-<script>window.__V = "8"; window.__UPLOAD = "https://abidasmuss-upload.brunokmoch08.workers.dev";</script>
-<script src="data/meta.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script>window.__V = "9"; window.__UPLOAD = "https://abidasmuss-upload.brunokmoch08.workers.dev";</script>
+<script src="data/meta.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

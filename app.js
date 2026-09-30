@@ -190,6 +190,28 @@
   setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
   themeBtn.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true));
 
+  /* ---------- Hintergrundfarbe (Farbtabelle) ---------- */
+  const PALETTE = '000c82,0923a4,08349b,014393,055899,0872a1,0b89a7,0b889b,0c8790,0b8783,0b8674,0c8664,0e8653,2d8450,49834a,568248,6a8045,787f43;0000e1,002be8,034be0,036bf0,0a8adc,0faada,00ffff,13e0cf,14e5c2,12e1b3,11e8a4,11f48f,13fa75,45e274,6cd773,8ad271,a0d170,b6cf70;1731d6,1244da,1657d8,1d73d5,2194d7,23afd8,2edad9,23ded1,22e1c3,20e4b5,20e6a8,26e896,30ea85,4ce17a,6cd773,8dd577,a1d170,b6ce6f;3159d2,275bd3,316fd2,2d7ed4,379ed6,3cb6d7,40d7d8,38d9d1,33ddc3,31dfb9,3be0ac,3de29f,45e18f,4de17a,6fd977,8dd577,a3d275,b6ce6f;4976d2,457cd1,4381d2,4d96d5,4da9d7,4fbed7,53d7d9,50d7d3,49d9c6,4fdabc,56ddb4,57deaa,61e09d,67dd8e,82d98c,98d688,b3d793,c1d285;70a2d9,70a2d9,70a2d9,69a7d7,66b6da,66c4d7,67d4d5,67d4d5,67d3d4,65d4d8,6cdbba,70ddb5,77e0a9,79de9a,8edb98,a3d996,b3d794,c4d591;88bceb,88bceb,88bceb,88c0e2,89c8e1,8bd1e0,80d7d9,7ed6d8,79d7cc,7adbc7,81ddc0,86debf,8ce0b5,8adea8,9bdda5,acd9a1,badb9f,cbd89c;97c6e2,97c6e2,96c7e1,91c4df,94cee0,8fd2df,93dbdb,92dbdb,8fdad0,90ddcc,8dddc4,96dfc7,9be2bf,9ae1b4,a2e0b2,b7deae,c2ddaa,d1dba8;aad9eb,aad9eb,abd9ea,abd9ea,a5d8e3,a3dde2,a3dde2,a8dfdc,a3ded5,a5e1d2,a2e2cd,a5e1ce,a0e5c2,aae4c0,b5e1bc,bfe1ba,cae0b5,d7deb2;bfe5e7,bee6e7,c2e7e7,c2e7e7,c2e7e7,c2e7e7,c2e7e7,bce5e2,b5e3db,b5e5d8,b2e4d2,b2e4d2,b1e7cc,b8e7ca,bfe6c6,c7e4c2,d1e3be,dbe1bb;c9e9e5,c8e9e6,caeae6,cbe9e6,cbeae6,cbeae6,caeae7,c4e9e4,c2e9e1,c0eade,c0e9d9,bfead9,c1ead2,c1ead2,c7e9ce,cde6c9,d5e7c8,e0e5c2;d1f2ef,d1f2ef,d1f2ef,d1f2ef,d1f2ef,d1f2ef,d1f2ef,c8e9e4,c4e8df,c1eadd,c4ebdb,c4ecd9,c3ecd7,c6ead5,cae9d1,d0e8cd,d7e6c8,e0e6c5;a6783b,ac7336,b3692f,bf5e26,cb511c,c5481d,ff3c0d,d53e26,c7403b,bd4052,b84160,b4426d,b1437c,913d84,793789,60308f,3e2596,291fba;d1cb71,debd69,fbaf61,ffa055,ff8d47,ff6c29,ff5415,ff543e,fd5963,ff577b,ff5891,ff5aa1,ff5aac,ff52b1,ae46b4,803cb9,5c31c1,3b26c9;d1d086,dcbe6d,fab064,ffa35c,ff914e,ff7737,ff5b1c,ff5c3e,fd5f5f,ff6076,ff6094,ff5fa4,ff61ae,dd55b3,ad51b5,8648ba,623fc0,4b3fc5;d1d087,d7c375,fab064,ffaa67,ff914e,ff8344,ff6629,ff6849,fe6b67,ff6a7e,ff6c99,ff6aa7,ff6cb2,ff61ae,b25fb8,8d5abc,6d52c0,5a54c5;d1d086,d8c57f,e2bb7a,fab075,ffa167,ff9051,ff763c,ff7a57,fe7a73,ff7b88,ff7aa1,ff78ae,ff79b6,d771ba,b771bc,976ec0,7d6ac3,6b6bc7;d3d391,d7cb8c,dec187,eab984,ffad76,ff9f62,ff8a51,ff8b65,fe8a7d,ff8a91,ff8aa9,ff86b4,ff88bd,d683bf,bd84c0,a182c2,8b81c6,7c81c7;d7d59b,d9cf97,ddc894,e4c292,f0b684,ffaa6f,ff9f67,ff9b72,fe9a89,ff9a9c,ff99b3,ff96bd,ff98c2,d794c4,c396c5,ac98c8,9b99c9,8c96ca;dbd9a6,ddd4a2,dfd09f,e4cb9f,e8c092,fbb17a,f7b278,ffa883,fea89b,ffa9aa,ffa9bd,ffa7c7,ffa7cb,dda6ca,c9a8cb,b8aacd,aaadce,9caace;dfddaf,e1d9ad,e2d7ac,e5d4ac,e6cda3,e7c395,e5bd87,fcba9c,febaab,f9b8af,ffb7c6,ffb4ce,ffb5d1,e1b5d1,d1b9d2,c2bbd3,b8c1d6,aabcd3;e2e1b8,e3e0b8,e5ddb7,e8dcb7,e7d7b2,e5d0a9,e3cda1,eccbaf,edc9ba,f7c7c4,fac3ce,ffc1d7,f5c2d7,d9c7d9,d9c7d9,c9c9d9,c2d0dd,b5cad8;e6e4bf,e6e3bf,e8e3be,e6e2be,e5e0bc,e6dcb7,e6dbb7,e8d7bc,ecd3c3,f0d0cb,f4ccd4,f5cbdc,f5cadd,eacdde,eacdde,d2d5e0,cadae0,c0d9df;e7e5c2,e7e3bf,e6e5c2,e7e5c2,e8e5c2,e5e4c0,e7e4c2,e7e2c4,e9d9c7,f0d5cf,f3d1d8,f6cfe0,f3cede,ebd0df,dfd4e1,d6d9e1,d0e2e5,cae7e4;000000,1e2020,2d2f30,3e4041,4f5252,5f6262,666666,6f7372,818484,909494,999999,9fa2a3,adb0b0,b8bbbb,c4c6c6,cccccc,d4d5d5,ffffff'.split(';').map(r => r.split(',').map(c => '#' + c));
+  const lum = hex => { const v = [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+  function setBg(c) {
+    const root = document.documentElement;
+    if (c) { root.style.setProperty('--userbg', c); root.classList.add('custombg'); setTheme(lum(c) > .22 ? 'light' : 'dark', true); }
+    else { root.style.removeProperty('--userbg'); root.classList.remove('custombg'); }
+    try { c ? localStorage.setItem('abi-bg', c) : localStorage.removeItem('abi-bg'); } catch (e) {}
+    document.querySelectorAll('#bgGrid .sw').forEach(b => b.classList.toggle('on', b.dataset.c === c));
+  }
+  document.getElementById('bgBtn').addEventListener('click', () => {
+    const g = document.getElementById('bgGrid');
+    if (!g.childElementCount) {
+      const cur = getComputedStyle(document.documentElement).getPropertyValue('--userbg').trim();
+      g.innerHTML = PALETTE.map((row, i) => (i === 12 ? '<div class="bgsep">Komplementärfarben</div>' : '') + '<div class="bgrow">' +
+        row.map(c => `<button class="sw${c === cur ? ' on' : ''}" data-c="${c}" style="background:${c}" title="${c.toUpperCase()}" aria-label="Farbe ${c.toUpperCase()}"></button>`).join('') + '</div>').join('');
+      g.addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) setBg(b.dataset.c); });
+    }
+    openModal('bg');
+  });
+  document.getElementById('bgReset').addEventListener('click', () => { setBg(null); setTheme('dark', true); });
+
   document.getElementById('fsBtn').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.();
   });
