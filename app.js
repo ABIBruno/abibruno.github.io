@@ -59,7 +59,7 @@
     const res = await fetch(url + '?v=' + (window.__V || '1'));
     if (!res.ok) throw new Error('Datei nicht gefunden: ' + url);
     const buf = new Uint8Array(await res.arrayBuffer());
-    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, k, buf.slice(12));
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, k, buf.subarray(12));
   }
 
   function loadScript(src) {
@@ -69,22 +69,31 @@
       document.head.appendChild(s);
     });
   }
-  async function getLB(n) {
-    if (cache[n]) return cache[n];
-    if (!window.__ENC || !window.__ENC[n]) await loadScript(`data/lb${n}.js`);
-    cache[n] = JSON.parse(await decrypt(key, window.__ENC[n]));
-    return cache[n];
+  // Laufende Ladevorgänge merken, damit parallele Aufrufe dieselbe Datei nicht doppelt laden/entschlüsseln
+  const once = (store, id, fn) => store[id] || (store[id] = fn().catch(e => { delete store[id]; throw e; }));
+  const lbLoading = {};
+  function getLB(n) {
+    if (cache[n]) return Promise.resolve(cache[n]);
+    return once(lbLoading, n, async () => {
+      if (!window.__ENC || !window.__ENC[n]) await loadScript(`data/lb${n}.js`);
+      return (cache[n] = JSON.parse(await decrypt(key, window.__ENC[n])));
+    });
   }
   const getAll = () => Promise.all([1, 2, 3, 4, 5, 6].map(getLB));
-  async function getLect() {
-    if (lectCache) return lectCache;
-    if (!window.__LECT) await loadScript('data/lect.js');
-    return (lectCache = JSON.parse(await decrypt(key, window.__LECT)));
+  const listLoading = {};
+  function getLect() {
+    if (lectCache) return Promise.resolve(lectCache);
+    return once(listLoading, 'lect', async () => {
+      if (!window.__LECT) await loadScript('data/lect.js');
+      return (lectCache = JSON.parse(await decrypt(key, window.__LECT)));
+    });
   }
-  async function getPriv() {
-    if (privCache) return privCache;
-    if (!window.__PRIV) await loadScript('data/priv.js');
-    return (privCache = JSON.parse(await decrypt(pkey, window.__PRIV)));
+  function getPriv() {
+    if (privCache) return Promise.resolve(privCache);
+    return once(listLoading, 'priv', async () => {
+      if (!window.__PRIV) await loadScript('data/priv.js');
+      return (privCache = JSON.parse(await decrypt(pkey, window.__PRIV)));
+    });
   }
 
   /* ---------- Sperre ---------- */
@@ -129,6 +138,8 @@
       key = null; pkey = null; lectCache = null; privCache = null;
       for (const k in timers) delete timers[k]; activeTimer = null;
       for (const k in cache) delete cache[k];
+      for (const k in lbLoading) delete lbLoading[k];
+      for (const k in listLoading) delete listLoading[k];
       for (const k in blobCache) { URL.revokeObjectURL(blobCache[k]); delete blobCache[k]; }
       store.del('sessionStorage', 'abi-key'); store.del('sessionStorage', 'abi-pkey'); updateLockBtn();
       location.hash = '#/';
@@ -168,15 +179,16 @@
   /* ---------- Modals ---------- */
   function openModal(id) { document.getElementById('m-' + id).classList.add('open'); }
   function closeModals() { document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); }
+  function dismissModals() {
+    if (lockModal.classList.contains('open') && pending && !key) { pending = null; if (!location.hash || location.hash === '#/') render(); else location.hash = '#/'; }
+    if (privModal.classList.contains('open') && ppending && !pkey) { ppending = null; if (location.hash.startsWith('#/privat')) location.hash = '#/'; }
+    closeModals();
+  }
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]'); if (o) openModal(o.dataset.open);
-    if (e.target.closest('[data-close]') || e.target.classList.contains('modal')) {
-      if (lockModal.classList.contains('open') && pending && !key) { pending = null; if (!location.hash || location.hash === '#/') render(); else location.hash = '#/'; }
-      if (privModal.classList.contains('open') && ppending && !pkey) { ppending = null; if (location.hash.startsWith('#/privat')) location.hash = '#/'; }
-      closeModals();
-    }
+    if (e.target.closest('[data-close]') || e.target.classList.contains('modal')) dismissModals();
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.modal.open')) dismissModals(); });
   /* ---------- Hell/Dunkel ---------- */
   const themeBtn = document.getElementById('themeBtn');
   function setTheme(t, save) {
@@ -421,7 +433,9 @@
   async function listLB(n, filter = 'alle', topic = 'alle', open = true) {
     const l = LB[n];
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
     const [data, lect] = await Promise.all([getLB(n), getLect()]);
+    if (seq !== navSeq) return;
     const tasks = applyFilter(data.tasks, filter);
     const mine = lect.filter(v => v.lb == n);
     const shown = topic === 'alle' ? mine : mine.filter(v => v.topic === topic);
@@ -442,7 +456,9 @@
 
   async function lectPage(lbSel = 'alle', topic = 'alle') {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
     const lect = await getLect();
+    if (seq !== navSeq) return;
     const inLb = lbSel === 'alle' ? lect : lect.filter(v => String(v.lb) === String(lbSel));
     const shown = topic === 'alle' ? inLb : inLb.filter(v => v.topic === topic);
     const lbs = [...new Set(lect.map(v => v.lb))].sort();
@@ -459,7 +475,9 @@
 
   async function privPage(lbSel = 'alle') {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
     const zf = await getPriv();
+    if (seq !== navSeq) return;
     const lbs = [...new Set(zf.map(v => v.lb))].sort();
     const shown = lbSel === 'alle' ? zf : zf.filter(v => String(v.lb) === String(lbSel));
     app.innerHTML = `
@@ -472,6 +490,7 @@
 
   async function viewer(kind, id) {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE DOKUMENT …</p>';
+    const seq = navSeq;
     const list = kind === 'v' ? await getLect() : await getPriv();
     const v = list.find(x => x.id === id);
     if (!v) { location.hash = kind === 'v' ? '#/vorlesungen' : '#/privat'; return; }
@@ -480,11 +499,13 @@
       const buf = await decryptFile(kind === 'v' ? key : pkey, `data/${kind}/${id}.bin`);
       blobCache[ck] = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
     }
+    if (seq !== navSeq) return;
     const url = blobCache[ck];
     const back = kind === 'v' ? `#/lb/${v.lb}` : '#/privat';
     let tasksHTML = '';
-    if (kind === 'v' && v.tasks.length) {
+    if (kind === 'v' && (v.tasks || []).length) {
       const all = await getAll();
+      if (seq !== navSeq) return;
       const found = [];
       all.forEach((lb, i) => lb.tasks.forEach(t => { if (v.tasks.includes(t.id)) found.push(`<a class="minitask" href="#/lb/${i + 1}/${t.id}"><b>${t.year} · ${esc(t.nr)}</b> ${esc(t.topic)}</a>`); }));
       tasksHTML = `<div class="box"><div class="lbl">Passende Prüfungsaufgaben</div><div class="minitasks">${found.join('')}</div></div>`;
@@ -510,7 +531,9 @@
 
   async function listAll() {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
     const all = await getAll();
+    if (seq !== navSeq) return;
     let html = '';
     all.forEach((lb, i) => {
       const ts = lb.tasks;
@@ -525,7 +548,9 @@
 
   async function taskPage(n, id) {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
     const [data, lectAll] = await Promise.all([getLB(n), getLect()]);
+    if (seq !== navSeq) return;
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
@@ -549,8 +574,8 @@
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
             <button class="btn lectbtn" id="lectBtn" ${tl.length ? '' : 'disabled'}>📚 ${tl.length ? `VORLESUNG${tl.length > 1 ? 'EN' : ''} (${tl.length})` : 'KEINE VORLESUNG'}</button>
             <div class="nav2">
-              <a class="btn ghost" href="#/lb/${n}/${prev?.id || ''}" ${prev ? '' : 'disabled'}>← ZURÜCK</a>
-              <a class="btn ghost" href="#/lb/${n}/${next?.id || ''}" ${next ? '' : 'disabled'}>WEITER →</a>
+              ${prev ? `<a class="btn ghost" href="#/lb/${n}/${prev.id}">← ZURÜCK</a>` : '<button class="btn ghost" disabled>← ZURÜCK</button>'}
+              ${next ? `<a class="btn ghost" href="#/lb/${n}/${next.id}">WEITER →</a>` : '<button class="btn ghost" disabled>WEITER →</button>'}
             </div>
           </div>
         </aside>
@@ -688,7 +713,10 @@
   }
 
   /* ---------- Router ---------- */
+  // navSeq zählt jede Navigation; Seiten prüfen nach dem Laden, ob sie noch aktuell sind
+  let navSeq = 0;
   async function render() {
+    navSeq++;
     const h = location.hash.replace(/^#\/?/, '');
     const parts = h.split('/').filter(Boolean);
     try {
@@ -696,15 +724,15 @@
       if (parts[0] === 'upload') return uploadPage();
       if (parts[0] === 'privat') {
         if (!pkey) { home(); return requirePriv(render); }
-        return parts[1] ? viewer('p', parts[1]) : privPage();
+        return await (parts[1] ? viewer('p', parts[1]) : privPage());
       }
       const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
-      if (parts[0] === 'vorlesungen') return lectPage();
-      if (parts[0] === 'vorlesung' && parts[1]) return viewer('v', parts[1]);
-      if (parts[0] === 'lb' && LB[parts[1]]) return parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]);
-      if (parts[0] === 'zufall') return randomTask();
-      if (parts[0] === 'alle') return listAll();
+      if (parts[0] === 'vorlesungen') return await lectPage();
+      if (parts[0] === 'vorlesung' && parts[1]) return await viewer('v', parts[1]);
+      if (parts[0] === 'lb' && LB[parts[1]]) return await (parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]));
+      if (parts[0] === 'zufall') return await randomTask();
+      if (parts[0] === 'alle') return await listAll();
       location.hash = '#/';
     } catch (err) {
       console.error(err);
