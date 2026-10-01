@@ -136,7 +136,7 @@
   lockBtn.addEventListener('click', () => {
     if (key || pkey) {
       key = null; pkey = null; lectCache = null; privCache = null;
-      for (const k in timers) delete timers[k]; activeTimer = null;
+      for (const k in timers) delete timers[k]; activeTimer = null; syncTicker();
       for (const k in cache) delete cache[k];
       for (const k in lbLoading) delete lbLoading[k];
       for (const k in listLoading) delete listLoading[k];
@@ -339,7 +339,12 @@
       pill.innerHTML = `<span>⏱</span><b>${fmt(left < 0 ? left : left + 999)}</b><small>${esc(tm.label)}</small>`;
     } else pill.hidden = true;
   }
-  setInterval(tick, 250);
+  let ticker = null;
+  function syncTicker() {
+    const running = Object.values(timers).some(tm => tm.start);
+    if (running && !ticker) ticker = setInterval(tick, 250);
+    else if (!running && ticker) { clearInterval(ticker); ticker = null; tick(); }
+  }
 
   function timerHTML(t, lbn) {
     if (!timers[t.id]) timers[t.id] = { acc: 0, start: null, total: t.minutes * 60000, lb: lbn, label: `${t.year} · ${t.nr}`, beeped: false };
@@ -364,9 +369,9 @@
         for (const o in timers) if (o !== id && timers[o].start) { timers[o].acc += Date.now() - timers[o].start; timers[o].start = null; }
         tm.start = Date.now(); activeTimer = id;
       }
-      tick();
+      syncTicker(); tick();
     };
-    box.querySelector('.treset').onclick = () => { tm.acc = 0; tm.start = null; tm.beeped = false; tick(); };
+    box.querySelector('.treset').onclick = () => { tm.acc = 0; tm.start = null; tm.beeped = false; syncTicker(); tick(); };
     if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => { box.dataset.visible = e.isIntersecting ? '1' : '0'; tick(); })).observe(box);
     tick();
   }
@@ -746,22 +751,27 @@
     const c = document.getElementById('stars'), ctx = c.getContext('2d');
     let pts = [];
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dpr = Math.min(devicePixelRatio || 1, 2);   // Handys mit 3x-Display: halbe Rechenlast, sieht gleich aus
+    let last = 0, rt;
     function size() {
-      c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio;
+      c.width = innerWidth * dpr; c.height = innerHeight * dpr;
       const n = Math.round(innerWidth * innerHeight / 3500);
       pts = Array.from({ length: n }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, r: Math.random() * 1.3 + .2, p: Math.random() * 6.28, s: Math.random() * .02 + .005 }));
     }
-    function draw() {
-      ctx.clearRect(0, 0, c.width, c.height);
-      for (const s of pts) {
-        s.p += s.s;
-        ctx.globalAlpha = .35 + .5 * Math.abs(Math.sin(s.p));
-        ctx.fillStyle = '#cfe4ff';
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * devicePixelRatio, 0, 6.28); ctx.fill();
-      }
+    function draw(now = 0) {
       if (!reduce) requestAnimationFrame(draw);
+      if (now - last < 33) return;              // ca. 30 Bilder pro Sekunde reichen für das Funkeln
+      const step = last ? Math.min((now - last) / 16.7, 4) : 1; last = now;
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.fillStyle = '#cfe4ff';
+      for (const s of pts) {
+        s.p += s.s * step;
+        ctx.globalAlpha = .35 + .5 * Math.abs(Math.sin(s.p));
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * dpr, 0, 6.28); ctx.fill();
+      }
     }
-    size(); draw(); addEventListener('resize', () => { size(); if (reduce) draw(); });
+    size(); draw(); if (reduce) draw(34);
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { size(); if (reduce) { last = 0; draw(34); } }, 150); });
   }
 
   /* ---------- Start ---------- */

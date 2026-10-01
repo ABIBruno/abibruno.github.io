@@ -246,7 +246,6 @@ main{max-width:1200px;margin:0 auto;padding:0 16px 40px}
 .docico{margin-right:8px}
 .empty{color:var(--muted);font-size:14px;margin:0 0 4px}
 .btn.lectbtn{border-color:#9ad8ff;background:rgba(154,216,255,.1)}
-.btn[disabled]{opacity:.4;pointer-events:none}
 .modal-box.wide{width:min(560px,100%)}
 .lectlist{display:grid;gap:10px;text-align:left;margin:6px 0}
 .lectitem{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#0a0e18;color:var(--text);text-decoration:none;transition:border-color .2s}
