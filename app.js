@@ -621,6 +621,7 @@
             <li>Die Datei wird automatisch gelesen und einem <b>Lernbereich</b>, einem <b>Thema</b> und passenden <b>Prüfungsaufgaben</b> zugeordnet.</li>
             <li>Nach ca. 1–2 Minuten erscheint hier das Ergebnis – und die Vorlesung ist auf der Seite.</li>
           </ol>
+          <p class="empty">Datenschutz: Die Datei läuft über Cloudflare in ein privates GitHub-Repository, wird dort verschlüsselt und auf dieser Seite veröffentlicht; das unverschlüsselte Original wird danach gelöscht. Details: <button class="dslink" data-open="datenschutz">Datenschutzerklärung</button>.</p>
           <p class="empty">Tipp: Aussagekräftige Dateinamen (z. B. „Preisbildung am Markt.pdf“) werden als Titel verwendet.</p>
         </aside>
       </div>`;

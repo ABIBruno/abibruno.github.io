@@ -1,0 +1,21 @@
+# Achtung: Dieses Repo ist ÖFFENTLICH. Hier darf nur Verschlüsseltes rein.
+# Schutz vor versehentlich hineinkopierten Klartext-Dateien:
+*.pdf
+*.docx
+*.xlsx
+*.pptx
+data.json
+out/
+pdf/
+
+# Python / Node / Cloudflare
+__pycache__/
+node_modules/
+.wrangler/
+.dev.vars
+.env
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini

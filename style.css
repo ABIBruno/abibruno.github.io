@@ -465,3 +465,11 @@ html.customfg :is(.subtitle,.sechead h2,.sechead h2 span,.sechead h2 b,.tile .t,
 .fgprev b{font-size:12px;white-space:nowrap;padding:2px 8px;border-radius:999px;background:rgba(127,127,127,.15)}
 .fgprev b.ok{color:#1a9c62}.fgprev b.mid{color:#c98a00}.fgprev b.bad{color:#e0334a}
 .fgprev .fgh{font-family:Orbitron,sans-serif;letter-spacing:.14em;font-weight:700}
+/* Datenschutz */
+.modal-box.legal{width:min(680px,100%);max-height:calc(100vh - 32px);overflow-y:auto;text-align:left}
+.modal-box.legal .modal-icon,.modal-box.legal h2,.modal-box.legal>.btn{text-align:center;justify-self:center}
+.modal-box.legal h3{font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.1em;margin:8px 0 -4px;color:var(--cyan)}
+.modal-box.legal p{font-size:14px;line-height:1.55}
+.modal-box.legal a{color:var(--cyan)}
+.modal-box.legal .dsstand{color:var(--muted);font-size:12px}
+.uphelp .dslink{background:none;border:0;padding:0;color:var(--cyan);font:inherit;text-decoration:underline;cursor:pointer}
