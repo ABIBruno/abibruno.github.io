@@ -3,135 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ABIdasmuss | VBWL-Abiturtrainer</title>
-<meta name="description" content="VBWL-Abiturprüfungen 2017–2024 nach Lernbereichen – Aufgaben und ausführliche Lösungen.">
+<title>ABIdasmuss | Abiturtrainer</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05070f">
-<script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
+<script>
+/* Alte Links wie abibruno.github.io/#/lb/2/... weiterhin direkt zum VBWL-Trainer leiten */
+if (location.hash && location.hash.indexOf('#/') === 0) location.replace('vbwl.html' + location.hash);
+try{if(localStorage.getItem('abi-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=14">
+<style>
+:root{--bg:#05070f;--panel:#11151f;--line:#262d3d;--text:#dfe6f3;--muted:#8b95ab;--cyan:#38d6ff;--violet:#b58cff;--pink:#f08ad8;--green:#5be3a1;
+--grad:linear-gradient(90deg,var(--cyan) 0%,#9ad8ff 45%,var(--violet) 70%,var(--pink) 100%)}
+:root[data-theme="light"]{--bg:#eef2f9;--panel:#ffffff;--line:#d5dcea;--text:#151a26;--muted:#5a6478}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:radial-gradient(ellipse at 50% -10%,rgba(56,214,255,.12),transparent 60%),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 16px;text-align:center}
+h1{font-family:Orbitron,sans-serif;font-weight:900;font-size:clamp(2rem,7vw,3.6rem);letter-spacing:.06em;margin:0 0 10px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+p.sub{color:var(--muted);margin:0 0 44px;font-size:1.05rem}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,260px));gap:22px;width:100%;justify-content:center}
+.card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 20px;border-radius:22px;background:var(--panel);border:1px solid var(--line);color:var(--text);text-decoration:none;transition:transform .15s,border-color .15s,box-shadow .15s}
+.card:hover,.card:focus-visible{transform:translateY(-4px);outline:none}
+.card .ico{font-size:2.6rem}
+.card .name{font-family:Orbitron,sans-serif;font-weight:700;font-size:1.6rem;letter-spacing:.08em}
+.card .desc{color:var(--muted);font-size:.92rem}
+.vbwl:hover,.vbwl:focus-visible{border-color:var(--cyan);box-shadow:0 0 34px rgba(56,214,255,.25)}
+.vbwl .name{color:var(--cyan)}
+.geso:hover,.geso:focus-visible{border-color:var(--green);box-shadow:0 0 34px rgba(91,227,161,.25)}
+.geso .name{color:var(--green)}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 16px;letter-spacing:.05em}
+footer a{color:var(--muted)}
+@media (max-width:560px){.choices{grid-template-columns:1fr;max-width:340px}}
+</style>
 </head>
 <body>
-<canvas id="stars" aria-hidden="true"></canvas>
-
-<header class="topbar">
-  <button class="pill" data-open="about"><span class="ico">ⓘ</span> ABOUT</button>
-  <div class="topbar-right">
-    <button class="round" id="bgBtn" title="Farben wählen (Hintergrund &amp; Schrift)" aria-label="Farben wählen">🎨</button>
-    <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
-    <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
-    <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
-  </div>
-</header>
-
-<main id="app"></main>
-
-<footer class="footer">
-  <span>© 2026 ABIDASMUSS</span>
-  <button class="link" data-open="about">ÜBER DIE SEITE</button>
-  <button class="link" data-open="hinweis">HINWEIS</button>
-  <button class="link" data-open="datenschutz">DATENSCHUTZ</button>
-</footer>
-
-<!-- Modals -->
-<div class="modal" id="m-lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
-  <div class="modal-box">
-    <div class="modal-icon">🔐</div>
-    <h2 id="lockTitle">LABOR GESPERRT</h2>
-    <p>Die Aufgaben und Lösungen sind verschlüsselt. Gib das Passwort ein, um alle Lernbereiche freizuschalten.</p>
-    <form id="lockForm" autocomplete="off">
-      <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort" required>
-      <button type="submit" class="btn" id="pwBtn">ENTSPERREN</button>
-    </form>
-    <p class="err" id="pwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
-    <button class="btn ghost" data-close>ABBRECHEN</button>
-  </div>
-</div>
-
-<div class="modal" id="m-priv" role="dialog" aria-modal="true" aria-labelledby="privTitle">
-  <div class="modal-box" style="border-color:#f08ad8;box-shadow:0 0 40px rgba(240,138,216,.25)">
-    <div class="modal-icon">🗝️</div>
-    <h2 id="privTitle" style="color:#f08ad8">PRIVAT</h2>
-    <p>Dieser Bereich hat ein eigenes Passwort.</p>
-    <form id="privForm" autocomplete="off">
-      <input type="password" id="ppw" placeholder="Privat-Passwort" aria-label="Privat-Passwort" required>
-      <button type="submit" class="btn" id="ppwBtn">ÖFFNEN</button>
-    </form>
-    <p class="err" id="ppwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
-    <button class="btn ghost" data-close>ABBRECHEN</button>
-  </div>
-</div>
-
-<div class="modal" id="m-lect" role="dialog" aria-modal="true" aria-labelledby="lectTitle">
-  <div class="modal-box wide">
-    <div class="modal-icon">📚</div>
-    <h2 id="lectTitle">PASSENDE VORLESUNGEN</h2>
-    <div id="lectList" class="lectlist"></div>
-    <button class="btn ghost" data-close>SCHLIESSEN</button>
-  </div>
-</div>
-
-<div class="modal" id="m-bg" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
-  <div class="modal-box xwide">
-    <div class="modal-icon">🎨</div>
-    <h2 id="bgTitle">FARBEN</h2>
-    <div class="bgtabs" role="tablist"><button class="bgtab on" data-mode="bg" role="tab">🖼️ Hintergrund</button><button class="bgtab" data-mode="fg" role="tab">🔤 Überschriften</button></div>
-    <p id="bgHint"></p>
-    <div id="fgPreview" class="fgprev"><span class="fgh">ÜBERSCHRIFT · LERNBEREICH 2</span> <b></b></div>
-    <div id="bgGrid" class="bggrid"></div>
-    <div class="bgact"><button class="btn" id="bgReset">STANDARD</button><button class="btn ghost" data-close>FERTIG</button></div>
-  </div>
-</div>
-
-<div class="modal" id="m-about" role="dialog" aria-modal="true">
-  <div class="modal-box">
-    <div class="modal-icon">🎓</div>
-    <h2>ÜBER ABIDASMUSS</h2>
-    <p>Alle 66 Aufgaben der sächsischen VBWL-Abiturprüfungen (Leistungskurs, 2017–2024) – sortiert nach den sechs Lernbereichen, jeweils mit ausformulierter Lösung, Rechenweg und Kontrollvermerk.</p>
-    <p>Zu jeder Aufgabe führt der Button „📚 Vorlesungen“ direkt zu den passenden Unterrichtsfolien. Alle Vorlesungen findest du auch unter „Vorlesungen“ oder im Kasten auf der Seite des jeweiligen Lernbereichs.</p>
-    <p>Lehrkräfte können über „Hochladen“ neue Vorlesungen einreichen – sie werden automatisch eingeordnet.</p>
-    <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
-    <button class="btn" data-close>SCHLIESSEN</button>
-  </div>
-</div>
-
-<div class="modal" id="m-hinweis" role="dialog" aria-modal="true">
-  <div class="modal-box">
-    <div class="modal-icon">⚖️</div>
-    <h2>HINWEIS</h2>
-    <p>Private Lernseite zur Abiturvorbereitung. Die Aufgabenstellungen stammen aus den Abiturprüfungen des Freistaates Sachsen; die Rechte liegen beim jeweiligen Urheber. Die Inhalte sind passwortgeschützt und nur für den persönlichen Gebrauch bestimmt. Alle Lösungen ohne Gewähr.</p>
-    <button class="btn" data-close>SCHLIESSEN</button>
-  </div>
-</div>
-
-<div class="modal" id="m-datenschutz" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
-  <div class="modal-box legal">
-    <div class="modal-icon">🛡️</div>
-    <h2 id="dsTitle">DATENSCHUTZ</h2>
-    <h3>1. Verantwortlich</h3>
-    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung und kein Tracking oder Analyse-Tool.</p>
-    <h3>2. Hosting (GitHub Pages)</h3>
-    <p>Die Seite liegt bei GitHub Pages, einem Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei und Browser-Informationen, um die Seite auszuliefern und vor Angriffen zu schützen. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren Bereitstellung). Mehr dazu: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
-    <h3>3. Schriftarten (Google Fonts)</h3>
-    <p>Für die Schriften Orbitron und Inter wird Google Fonts der Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland, genutzt. Dabei lädt dein Browser die Schriftdateien direkt von Servern von Google; Google erhält dadurch deine IP-Adresse. Eine Übermittlung in die USA an die Google LLC ist möglich; Google ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (einheitliche Darstellung der Seite). Mehr dazu: <a href="https://policies.google.com/privacy?hl=de" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</p>
-    <h3>4. Passwort und Verschlüsselung</h3>
-    <p>Aufgaben, Lösungen und Vorlesungen liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
-    <h3>5. Speicher im Browser</h3>
-    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung sowie bei Lehrkräften den eingegebenen Upload-Code; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
-    <h3>6. Hochladen (für Lehrkräfte)</h3>
-    <p>Beim Hochladen gehen die PDF-Datei, ihr Dateiname, der Upload-Code und deine IP-Adresse an einen Cloudflare Worker der Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (zertifiziert unter dem EU-US Data Privacy Framework). Von dort wird die Datei in ein privates GitHub-Repository übertragen, automatisch eingeordnet, verschlüsselt und auf dieser Seite veröffentlicht. Die unverschlüsselte Originaldatei wird danach gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; die verschlüsselte Vorlesung bleibt online, bis du ihre Löschung verlangst.</p>
-    <h3>7. Deine Rechte</h3>
-    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
-    <p class="dsstand">Stand: Oktober 2026</p>
-    <button class="btn" data-close>SCHLIESSEN</button>
-  </div>
-</div>
-
-<script>window.__V = "14"; window.__UPLOAD = "https://abidasmuss-upload.brunokmoch08.workers.dev";</script>
-<script src="data/meta.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<main>
+  <h1>ABIDASMUSS</h1>
+  <p class="sub">Wähle dein Fach</p>
+  <nav class="choices">
+    <a class="card vbwl" href="vbwl.html"><span class="ico">📊</span><span class="name">VBWL</span><span class="desc">Volks- und Betriebswirtschaftslehre</span></a>
+    <a class="card geso" href="geso.html"><span class="ico">🩺</span><span class="name">GESO</span><span class="desc">Gesundheit und Soziales</span></a>
+  </nav>
+</main>
+<footer>© 2026 ABIDASMUSS · <a href="vbwl.html">Hinweis &amp; Datenschutz siehe VBWL-Seite</a></footer>
 </body>
 </html>
