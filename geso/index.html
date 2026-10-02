@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABIdasmuss | Geso-Abiturtrainer</title>
+<meta name="description" content="Abiturprüfungen Gesundheit und Soziales (LK) nach Lernbereichen – Aufgaben und ausführliche Lösungen.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05070f">
+<script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+<style>@media (max-width:480px){.topbar-left .ptxt{display:none}}</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<header class="topbar">
+  <div class="topbar-left" style="display:flex;gap:10px"><a class="pill" href="../" title="Zurück zur Fächerauswahl" aria-label="Zurück zur Fächerauswahl" style="text-decoration:none">←<span class="ptxt"> FÄCHER</span></a><button class="pill" data-open="about" aria-label="About"><span class="ico">ⓘ</span><span class="ptxt"> ABOUT</span></button></div>
+  <div class="topbar-right">
+    <button class="round" id="bgBtn" title="Farben wählen (Hintergrund &amp; Schrift)" aria-label="Farben wählen">🎨</button>
+    <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
+    <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
+    <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="footer">
+  <span>© 2026 ABIDASMUSS</span>
+  <button class="link" data-open="about">ÜBER DIE SEITE</button>
+  <button class="link" data-open="hinweis">HINWEIS</button>
+  <button class="link" data-open="datenschutz">DATENSCHUTZ</button>
+</footer>
+
+<!-- Modals -->
+<div class="modal" id="m-lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <h2 id="lockTitle">LABOR GESPERRT</h2>
+    <p>Die Geso-Aufgaben und -Lösungen sind verschlüsselt. Gib das Passwort ein, um alle Lernbereiche freizuschalten.</p>
+    <form id="lockForm" autocomplete="off">
+      <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort" required>
+      <button type="submit" class="btn" id="pwBtn">ENTSPERREN</button>
+    </form>
+    <p class="err" id="pwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
+    <button class="btn ghost" data-close>ABBRECHEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-bg" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
+  <div class="modal-box xwide">
+    <div class="modal-icon">🎨</div>
+    <h2 id="bgTitle">FARBEN</h2>
+    <div class="bgtabs" role="tablist"><button class="bgtab on" data-mode="bg" role="tab">🖼️ Hintergrund</button><button class="bgtab" data-mode="fg" role="tab">🔤 Überschriften</button></div>
+    <p id="bgHint"></p>
+    <div id="fgPreview" class="fgprev"><span class="fgh">ÜBERSCHRIFT · LERNBEREICH 2</span> <b></b></div>
+    <div id="bgGrid" class="bggrid"></div>
+    <div class="bgact"><button class="btn" id="bgReset">STANDARD</button><button class="btn ghost" data-close>FERTIG</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-about" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">🎓</div>
+    <h2>ÜBER ABIDASMUSS · GESO</h2>
+    <p>Die Aufgaben der sächsischen Abiturprüfungen im Leistungskurs Gesundheit und Soziales (Berufliches Gymnasium) – sortiert nach den sechs Lernbereichen der Jahrgangsstufen 12 und 13, jeweils mit ausformulierter Lösung.</p>
+    <p>Jede Prüfung besteht aus einer Pflichtaufgabe und zwei Wahlaufgaben, von denen du eine bearbeitest. Über die Filter kannst du nach Pflicht, Wahl und Jahrgang sortieren.</p>
+    <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-hinweis" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">⚖️</div>
+    <h2>HINWEIS</h2>
+    <p>Private Lernseite zur Abiturvorbereitung im Fach Gesundheit und Soziales. Die Aufgabenstellungen stammen aus den Abiturprüfungen des Freistaates Sachsen; die Rechte liegen beim jeweiligen Urheber. Die Inhalte sind passwortgeschützt und nur für den persönlichen Gebrauch bestimmt. Alle Lösungen ohne Gewähr.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-datenschutz" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
+  <div class="modal-box legal">
+    <div class="modal-icon">🛡️</div>
+    <h2 id="dsTitle">DATENSCHUTZ</h2>
+    <h3>1. Verantwortlich</h3>
+    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung und kein Tracking oder Analyse-Tool.</p>
+    <h3>2. Hosting (GitHub Pages)</h3>
+    <p>Die Seite liegt bei GitHub Pages, einem Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei und Browser-Informationen, um die Seite auszuliefern und vor Angriffen zu schützen. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren Bereitstellung). Mehr dazu: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+    <h3>3. Schriftarten (Google Fonts)</h3>
+    <p>Für die Schriften Orbitron und Inter wird Google Fonts der Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland, genutzt. Dabei lädt dein Browser die Schriftdateien direkt von Servern von Google; Google erhält dadurch deine IP-Adresse. Eine Übermittlung in die USA an die Google LLC ist möglich; Google ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (einheitliche Darstellung der Seite). Mehr dazu: <a href="https://policies.google.com/privacy?hl=de" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</p>
+    <h3>4. Passwort und Verschlüsselung</h3>
+    <p>Aufgaben und Lösungen liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
+    <h3>5. Speicher im Browser</h3>
+    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
+    <h3>6. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
+    <p class="dsstand">Stand: Oktober 2026</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<script>window.__V = "1";</script>
+<script src="data/meta.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
