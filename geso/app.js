@@ -14,7 +14,7 @@
     5: { name: 'Unter\u00ADstützung', full: 'Der zu unterstützende Mensch (Jgst. 13)', emoji: '🤝', accent: 'var(--lb5)' },
     6: { name: 'Teilhabe', full: 'Der teilhabende Mensch (Jgst. 13)', emoji: '🌍', accent: 'var(--lb6)' },
   };
-  const PART = { P: 'Pflichtaufgabe', W: 'Wahlaufgabe' };
+  const PART = { P: 'Pflichtaufgabe', W: 'Wahlaufgabe', X: 'Wahl (3 aus 4)' };
 
   const app = document.getElementById('app');
   const cache = {};
@@ -60,15 +60,33 @@
   }
   // Laufende Ladevorgänge merken, damit parallele Aufrufe dieselbe Datei nicht doppelt laden/entschlüsseln
   const once = (store, id, fn) => store[id] || (store[id] = fn().catch(e => { delete store[id]; throw e; }));
+  // Alle Aufgaben liegen in einer Datei (data/t.js); jede Aufgabe kennt ihre Lernbereiche (lbs)
   const lbLoading = {};
-  function getLB(n) {
-    if (cache[n]) return Promise.resolve(cache[n]);
-    return once(lbLoading, n, async () => {
-      if (!window.__ENC || !window.__ENC[n]) await loadScript(`data/lb${n}.js`);
-      return (cache[n] = JSON.parse(await decrypt(key, window.__ENC[n])));
+  const sortT = (a, b) => b.year.localeCompare(a.year) || a.nr.localeCompare(b.nr);
+  function getTasks() {
+    if (cache.t) return Promise.resolve(cache.t);
+    return once(lbLoading, 't', async () => {
+      if (!window.__ENC || !window.__ENC.t) await loadScript('data/t.js');
+      return (cache.t = JSON.parse(await decrypt(key, window.__ENC.t)).tasks.sort(sortT));
     });
   }
-  const getAll = () => Promise.all([1, 2, 3, 4, 5, 6].map(getLB));
+  const getLB = async n => ({ tasks: (await getTasks()).filter(t => t.lbs.includes(+n)) });
+  async function decryptFile(k, url) {
+    const res = await fetch(url + '?v=' + (window.__V || '1'));
+    if (!res.ok) throw new Error('Datei nicht gefunden: ' + url);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, k, buf.subarray(12));
+  }
+  const figCache = {};
+  function loadFigs() {
+    app.querySelectorAll('img[data-fig]').forEach(async img => {
+      const id = img.dataset.fig;
+      try {
+        if (!figCache[id]) figCache[id] = URL.createObjectURL(new Blob([await decryptFile(key, `data/f/${id}.bin`)], { type: 'image/jpeg' }));
+        img.src = figCache[id];
+      } catch (e) { img.alt = 'Abbildung konnte nicht geladen werden'; }
+    });
+  }
   /* ---------- Sperre ---------- */
   const lockModal = document.getElementById('m-lock');
   const pwInput = document.getElementById('pw');
@@ -112,6 +130,7 @@
       for (const k in timers) delete timers[k]; activeTimer = null; syncTicker();
       for (const k in cache) delete cache[k];
       for (const k in lbLoading) delete lbLoading[k];
+      for (const k in figCache) { URL.revokeObjectURL(figCache[k]); delete figCache[k]; }
       store.del('sessionStorage', KEYNAME); updateLockBtn();
       location.hash = '#/';
       render();
@@ -202,15 +221,16 @@
   const plain = html => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent || ''; };
 
   function cardHTML(t, lbn) {
+    lbn = lbn || t.lbs[0];
     const acc = LB[lbn].accent;
     return `<a class="card" style="--accent:${acc}" href="#/lb/${lbn}/${t.id}">
       <div class="top">
         <span class="badge year">${t.year}</span>
         <span class="badge part">${PART[t.part]} · ${esc(t.nr)}</span>
-        <span class="badge be">${t.be} BE · ⏱ ${t.minutes || Math.round(t.be * 3.375)} min</span>
+        <span class="badge be">${t.be} BE · ⏱ ${t.minutes} min</span>
       </div>
       <h3>${twoTone(t.topic)}</h3>
-      <p>LB${lbn} · ${esc(LB[lbn].name)} · ${label(t)}</p>
+      <p>${t.lbs.map(n => 'LB' + n).join(' · ')} · ${label(t)}</p>
     </a>`;
   }
 
@@ -275,7 +295,7 @@
       <div class="tstate">bereit</div>
       <div class="tbar"><i></i></div>
       <div class="tbtns"><button class="btn tstart">▶ START</button><button class="btn ghost treset" title="Zurücksetzen">↺</button></div>
-      <p class="tnote">${t.be} BE von 80 BE in 270 min = <b>${t.minutes} min</b> · so viel Zeit hast du anteilig in der echten Prüfung (ohne Lese- und Auswahlzeit).</p>
+      <p class="tnote">${t.be} BE × 3 min = <b>${t.minutes} min</b> · so viel Zeit hast du in der echten Prüfung (270 min für 90 BE, ohne Lese- und Auswahlzeit).</p>
       ${plan ? `<details class="planbox" open><summary>Zeitplan Teilaufgaben</summary><ol class="plan">${plan}</ol></details>` : ''}
     </div>`;
   }
@@ -296,7 +316,7 @@
   }
 
   /* ---------- Seiten ---------- */
-  const total = () => Object.values(META.lbs).reduce((a, l) => a + l.count, 0);
+  const total = () => META.total || 0;
   const EMPTY = '<p class="empty" style="margin:18px 0">Hier sind noch keine Aufgaben eingetragen – die Prüfungsaufgaben 2017–2026 folgen.</p>';
 
   function home() {
@@ -312,7 +332,7 @@
       <section class="hero">
         <h1 class="brand">ABIdasmuss</h1>
         <p class="subtitle">Das Geso-Abitur-Universum</p>
-        <p class="tagline">Gesundheit und Soziales · Leistungskurs · nach Lernbereichen</p>
+        <p class="tagline">Abiturprüfungen 2017 – 2026 · nach Lernbereichen</p>
       </section>
       <div class="searchrow">
         <label class="search"><span>🔍</span><input id="q" type="search" placeholder="Aufgabe suchen …" autocomplete="off"></label>
@@ -336,12 +356,12 @@
     const box = document.getElementById('results');
     term = term.trim().toLowerCase();
     if (term.length < 2) { box.innerHTML = ''; return; }
-    const all = await getAll();
+    const all = await getTasks();
     const hits = [];
-    all.forEach((lb, i) => lb.tasks.forEach(t => {
-      if (!t._txt) t._txt = (t.topic + ' ' + t.year + ' ' + t.nr + ' ' + plain(t.task)).toLowerCase();
-      if (t._txt.includes(term)) hits.push(cardHTML(t, i + 1));
-    }));
+    all.forEach(t => {
+      if (!t._txt) t._txt = (t.topic + ' ' + t.year + ' ' + plain(t.task) + ' ' + plain(t.solution)).toLowerCase();
+      if (t._txt.includes(term)) hits.push(cardHTML(t));
+    });
     box.innerHTML = hits.length
       ? `<div class="cards" style="margin-top:6px">${hits.slice(0, 30).join('')}</div>`
       : `<p class="loading" style="padding:20px 0">${total() ? 'Nichts gefunden.' : 'Noch keine Aufgaben eingetragen.'}</p>`;
@@ -349,8 +369,9 @@
 
   function chipsHTML(tasks, active) {
     if (!tasks.length) return '';
-    const years = [...new Set(tasks.map(t => t.year))].sort();
-    const opts = ['alle', 'P', 'W', ...years];
+    const years = [...new Set(tasks.map(t => t.year))].sort().reverse();
+    const parts = ['P', 'W'].filter(p => tasks.some(t => t.part === p));
+    const opts = ['alle', ...parts, ...years];
     return `<div class="chips">${opts.map(o => `<button class="chip${o === active ? ' on' : ''}" data-f="${o}">${o === 'alle' ? 'ALLE' : o === 'P' ? 'PFLICHT' : o === 'W' ? 'WAHL' : o}</button>`).join('')}</div>`;
   }
   const applyFilter = (tasks, f) => f === 'alle' ? tasks : (f === 'P' || f === 'W') ? tasks.filter(t => t.part === f) : tasks.filter(t => t.year === f);
@@ -374,20 +395,15 @@
   async function listAll() {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const seq = navSeq;
-    const all = await getAll();
+    const all = await getTasks();
     if (seq !== navSeq) return;
-    let html = '';
-    all.forEach((lb, i) => {
-      const ts = lb.tasks;
-      html += `<div class="sechead"><h2 style="color:${LB[i + 1].accent}">LB${i + 1} <span>·</span> ${esc(plain(LB[i + 1].name).toUpperCase())}</h2></div>
-               ${ts.length ? `<div class="cards">${ts.map(t => cardHTML(t, i + 1)).join('')}</div>` : '<p class="empty">Noch keine Aufgaben.</p>'}`;
-    });
-    const n = all.reduce((a, lb) => a + lb.tasks.length, 0);
-    const years = new Set(all.flatMap(lb => lb.tasks.map(t => t.year))).size;
+    const years = [...new Set(all.map(t => t.year))];
+    const html = years.map(y => `<div class="sechead"><h2>ABITUR ${esc(y)}</h2></div>
+      <div class="cards">${all.filter(t => t.year === y).map(t => cardHTML(t)).join('')}</div>`).join('');
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>Alle Aufgaben</h1><div class="meta">${n} Aufgaben${years ? ` aus ${years} Prüfungsjahren` : ''}</div></div></div>
-      ${html}`;
+        <div><h1>Alle Aufgaben</h1><div class="meta">${all.length} Aufgaben aus ${years.length} Prüfungen</div></div></div>
+      ${html || EMPTY}`;
   }
 
   async function taskPage(n, id) {
@@ -398,7 +414,6 @@
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
-    if (!t.minutes) t.minutes = Math.round(t.be * 3.375);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/lb/${n}" aria-label="Zurück">←</a>
         <div><h1>${esc(t.topic)}</h1><div class="meta">LB${n} · ${esc(plain(LB[n].name))} · ${label(t)}</div></div></div>
@@ -444,13 +459,12 @@
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
     bindTimer(t.id);
+    loadFigs();
     window.scrollTo(0, 0);
   }
 
   async function randomTask() {
-    const all = await getAll();
-    const pool = [];
-    all.forEach((lb, i) => lb.tasks.forEach(t => pool.push([i + 1, t.id])));
+    const pool = (await getTasks()).map(t => [t.lbs[0], t.id]);
     if (!pool.length) { app.innerHTML = `<div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a><div><h1>Zufallsaufgabe</h1></div></div>${EMPTY}`; return; }
     const [n, id] = pool[Math.floor(Math.random() * pool.length)];
     location.replace(`#/lb/${n}/${id}`);

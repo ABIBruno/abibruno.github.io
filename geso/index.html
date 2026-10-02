@@ -12,8 +12,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1">
-<style>@media (max-width:480px){.topbar-left .ptxt{display:none}}</style>
+<link rel="stylesheet" href="style.css?v=2">
+<style>@media (max-width:480px){.topbar-left .ptxt{display:none}}
+.gteil{margin-bottom:6px}.gteil ul ul{margin:4px 0}.gteil li{margin:3px 0}
+.gthemen{color:var(--muted);font-size:13px;margin:14px 0 4px}
+.gmatbox{margin-top:16px;border-top:1px solid var(--line);padding-top:6px}
+.gmatbox summary{cursor:pointer;font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.16em;color:var(--sky);padding:10px 0;list-style-position:outside}
+.gmat{white-space:pre-wrap;font-size:14.5px;line-height:1.6;overflow-wrap:anywhere}
+.gmat .ln{display:inline-block;width:2.4em;margin-left:-2.4em;color:var(--muted);font-size:11px;text-align:right;padding-right:.8em;box-sizing:border-box}
+.gmat{padding-left:2.4em}
+.gmat .mh{display:inline-block;color:var(--sky);margin-top:4px}
+.gmat small{color:var(--muted);font-size:12px}
+.gmat .gfig{display:block;max-width:min(100%,760px);height:auto;border-radius:10px;background:#fff;margin:8px 0;white-space:normal}
+:root[data-theme="light"] .gmatbox summary,:root[data-theme="light"] .gmat .mh{color:#0270a0}
+</style>
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
@@ -68,8 +80,8 @@
   <div class="modal-box">
     <div class="modal-icon">🎓</div>
     <h2>ÜBER ABIDASMUSS · GESO</h2>
-    <p>Die Aufgaben der sächsischen Abiturprüfungen im Leistungskurs Gesundheit und Soziales (Berufliches Gymnasium) – sortiert nach den sechs Lernbereichen der Jahrgangsstufen 12 und 13, jeweils mit ausformulierter Lösung.</p>
-    <p>Jede Prüfung besteht aus einer Pflichtaufgabe und zwei Wahlaufgaben, von denen du eine bearbeitest. Über die Filter kannst du nach Pflicht, Wahl und Jahrgang sortieren.</p>
+    <p>Alle Aufgaben der sächsischen Abiturprüfungen im Leistungskurs Gesundheit und Soziales (Berufliches Gymnasium, 2017–2026, inkl. Nachtermin 2020) – sortiert nach den sechs Lernbereichen der Jahrgangsstufen 12 und 13. Zu jeder Teilaufgabe gibt es das Erwartungsbild in Stichpunkten.</p>
+    <p>Eine Aufgabe deckt meist mehrere Lernbereiche ab und taucht deshalb in jedem davon auf. Bis 2025 wählst du 3 von 4 Aufgaben, seit 2026 gibt es eine Pflichtaufgabe und eine von zwei Wahlaufgaben.</p>
     <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
@@ -105,8 +117,8 @@
   </div>
 </div>
 
-<script>window.__V = "1";</script>
-<script src="data/meta.js?v=1"></script>
-<script src="app.js?v=1"></script>
+<script>window.__V = "2";</script>
+<script src="data/meta.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>
