@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <style>@media (max-width:480px){.topbar-left .ptxt{display:none}}
 .gteil{margin-bottom:6px}.gteil ul ul{margin:4px 0}.gteil li{margin:3px 0}
 .gthemen{color:var(--muted);font-size:13px;margin:14px 0 4px}
@@ -23,7 +23,7 @@
 .gmat{padding-left:2.4em}
 .gmat .mh{display:inline-block;color:var(--sky);margin-top:4px}
 .gmat small{color:var(--muted);font-size:12px}
-.gmat .gfig{display:block;max-width:min(100%,760px);height:auto;border-radius:10px;background:#fff;margin:8px 0;white-space:normal}
+.gmat .gfig{display:block;max-width:100%;height:auto;border-radius:10px;background:#fff;margin:8px 0;white-space:normal}
 :root[data-theme="light"] .gmatbox summary,:root[data-theme="light"] .gmat .mh{color:#0270a0}
 </style>
 </head>
@@ -64,6 +64,15 @@
   </div>
 </div>
 
+<div class="modal" id="m-lect" role="dialog" aria-modal="true" aria-labelledby="lectTitle">
+  <div class="modal-box wide">
+    <div class="modal-icon">📚</div>
+    <h2 id="lectTitle">PASSENDE VORLESUNGEN</h2>
+    <div id="lectList" class="lectlist"></div>
+    <button class="btn ghost" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
 <div class="modal" id="m-bg" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
   <div class="modal-box xwide">
     <div class="modal-icon">🎨</div>
@@ -82,6 +91,8 @@
     <h2>ÜBER ABIDASMUSS · GESO</h2>
     <p>Alle Aufgaben der sächsischen Abiturprüfungen im Leistungskurs Gesundheit und Soziales (Berufliches Gymnasium, 2017–2026, inkl. Nachtermin 2020) – sortiert nach den sechs Lernbereichen der Jahrgangsstufen 12 und 13. Zu jeder Teilaufgabe gibt es das Erwartungsbild in Stichpunkten.</p>
     <p>Eine Aufgabe deckt meist mehrere Lernbereiche ab und taucht deshalb in jedem davon auf. Bis 2025 wählst du 3 von 4 Aufgaben, seit 2026 gibt es eine Pflichtaufgabe und eine von zwei Wahlaufgaben.</p>
+    <p>Zu jeder Aufgabe führt der Button „📚 Vorlesungen“ zu passenden Unterrichtsmaterialien. Alle Vorlesungen findest du unter „Vorlesungen“ oder im Kasten auf der Seite des jeweiligen Lernbereichs.</p>
+    <p>Lehrkräfte können über „Hochladen“ neue Vorlesungen einreichen – sie werden automatisch eingeordnet.</p>
     <p>Tipp: Erst selbst lösen, dann die Lösung aufklappen.</p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
@@ -107,18 +118,20 @@
     <h3>3. Schriftarten (Google Fonts)</h3>
     <p>Für die Schriften Orbitron und Inter wird Google Fonts der Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland, genutzt. Dabei lädt dein Browser die Schriftdateien direkt von Servern von Google; Google erhält dadurch deine IP-Adresse. Eine Übermittlung in die USA an die Google LLC ist möglich; Google ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (einheitliche Darstellung der Seite). Mehr dazu: <a href="https://policies.google.com/privacy?hl=de" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</p>
     <h3>4. Passwort und Verschlüsselung</h3>
-    <p>Aufgaben und Lösungen liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
+    <p>Aufgaben, Lösungen und Vorlesungen liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
     <h3>5. Speicher im Browser</h3>
-    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
-    <h3>6. Deine Rechte</h3>
+    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung sowie bei Lehrkräften den eingegebenen Upload-Code; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
+    <h3>6. Hochladen (für Lehrkräfte)</h3>
+    <p>Beim Hochladen gehen die PDF-Datei, ihr Dateiname, der Upload-Code und deine IP-Adresse an einen Cloudflare Worker der Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (zertifiziert unter dem EU-US Data Privacy Framework). Von dort wird die Datei in ein privates GitHub-Repository übertragen (eigener Eingang für Geso), automatisch eingeordnet, verschlüsselt und auf dieser Seite veröffentlicht. Die unverschlüsselte Originaldatei wird danach gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; die verschlüsselte Vorlesung bleibt online, bis du ihre Löschung verlangst.</p>
+    <h3>7. Deine Rechte</h3>
     <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
     <p class="dsstand">Stand: Oktober 2026</p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
 </div>
 
-<script>window.__V = "2";</script>
-<script src="data/meta.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script>window.__V = "3"; window.__UPLOAD = "https://abidasmuss-upload.brunokmoch08.workers.dev";</script>
+<script src="data/meta.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

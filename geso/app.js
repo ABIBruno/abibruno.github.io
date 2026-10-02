@@ -1,7 +1,7 @@
 /* ABIdasmuss – Geso-Abiturtrainer (Gesundheit und Soziales, LK)
    Gleiches Konzept wie der VBWL-Trainer: Inhalte liegen verschlüsselt (AES-GCM, Schlüssel per PBKDF2
    aus dem Passwort) in data/lbN.js und werden erst im Browser nach Passworteingabe entschlüsselt.
-   Ohne Privat-Bereich, Hochladen und Vorlesungen. */
+   Mit Vorlesungen und Hochladen (eigener Briefkasten-Eingang „eingang-geso/“), ohne Privat-Bereich. */
 (() => {
   'use strict';
 
@@ -77,6 +77,15 @@
     const buf = new Uint8Array(await res.arrayBuffer());
     return crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, k, buf.subarray(12));
   }
+  let lectCache = null;
+  const blobCache = {};
+  function getLect() {
+    if (lectCache) return Promise.resolve(lectCache);
+    return once(lbLoading, 'lect', async () => {
+      if (!window.__LECT) { try { await loadScript('data/lect.js'); } catch (e) { return (lectCache = []); } }
+      return (lectCache = JSON.parse(await decrypt(key, window.__LECT)));
+    });
+  }
   const figCache = {};
   function loadFigs() {
     app.querySelectorAll('img[data-fig]').forEach(async img => {
@@ -131,6 +140,8 @@
       for (const k in cache) delete cache[k];
       for (const k in lbLoading) delete lbLoading[k];
       for (const k in figCache) { URL.revokeObjectURL(figCache[k]); delete figCache[k]; }
+      for (const k in blobCache) { URL.revokeObjectURL(blobCache[k]); delete blobCache[k]; }
+      lectCache = null;
       store.del('sessionStorage', KEYNAME); updateLockBtn();
       location.hash = '#/';
       render();
@@ -232,6 +243,28 @@
       <h3>${twoTone(t.topic)}</h3>
       <p>${t.lbs.map(n => 'LB' + n).join(' · ')} · ${label(t)}</p>
     </a>`;
+  }
+
+  const mb = n => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  const isNew = v => v.added && (Date.now() - new Date(v.added).getTime()) < 21 * 864e5;
+  function lectCardHTML(v, kind = 'v') {
+    const acc = LB[v.lb]?.accent || 'var(--cyan)';
+    const href = `#/vorlesung/${v.id}`;
+    const n = v.tasks ? v.tasks.length : 0;
+    return `<a class="card lect" style="--accent:${acc}" href="${href}">
+      <div class="top">
+        <span class="badge" style="color:${acc};border-color:color-mix(in srgb,${acc} 40%,transparent)">LB${v.lb}</span>
+        ${v.topic ? `<span class="badge part">${esc(v.topic)}</span>` : ''}
+        <span class="badge">${v.pages} S.</span>
+        ${isNew(v) ? '<span class="badge neu">NEU</span>' : ''}
+      </div>
+      <h3><span class="docico">📄</span>${twoTone(v.title)}</h3>
+      <p>${n ? `Passt zu ${n} Prüfungsaufgabe${n > 1 ? 'n' : ''}` : 'Grundlagen'} · ${mb(v.size)}</p>
+    </a>`;
+  }
+  function topicChips(list, active, attr = 'data-topic') {
+    const topics = [...new Set(list.map(v => v.topic))];
+    return `<div class="chips">${['alle', ...topics].map(o => `<button class="chip${o === active ? ' on' : ''}" ${attr}="${esc(o)}">${o === 'alle' ? 'ALLE THEMEN' : esc(o.toUpperCase())}</button>`).join('')}</div>`;
   }
 
   /* ---------- Timer ---------- */
@@ -342,8 +375,10 @@
       <div class="tiles lbtiles">${tiles}</div>
       <div class="sechead"><h2>EXTRAS</h2></div>
       <div class="tiles extras">
+        <a class="tile" style="--accent:var(--sky)" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Vorlesungen</span><span class="s">Nach Thema filtern</span></a>
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">${total()} Aufgaben</span></a>
+        <a class="tile" style="--accent:var(--green)" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -376,20 +411,85 @@
   }
   const applyFilter = (tasks, f) => f === 'alle' ? tasks : (f === 'P' || f === 'W') ? tasks.filter(t => t.part === f) : tasks.filter(t => t.year === f);
 
-  async function listLB(n, filter = 'alle') {
+  async function listLB(n, filter = 'alle', topic = 'alle', open = true) {
     const l = LB[n];
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const seq = navSeq;
-    const data = await getLB(n);
+    const [data, lect] = await Promise.all([getLB(n), getLect()]);
     if (seq !== navSeq) return;
     const tasks = applyFilter(data.tasks, filter);
+    const mine = lect.filter(v => v.lb == n);
+    const shown = topic === 'alle' ? mine : mine.filter(v => v.topic === topic);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben</div></div></div>
+        <div><h1>LB${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben · ${mine.length} Vorlesungen</div></div></div>
+      <details class="lectbox" style="--accent:${l.accent}" ${open ? 'open' : ''}>
+        <summary><span>📚 VORLESUNGEN ZU LB${n}</span><span class="cnt">${mine.length}</span></summary>
+        ${mine.length ? `${topicChips(mine, topic)}<div class="cards small">${shown.map(v => lectCardHTML(v)).join('')}</div>`
+          : '<p class="empty">Zu diesem Lernbereich gibt es noch keine Vorlesungen – Lehrkräfte können sie über „Hochladen“ einreichen.</p>'}
+      </details>
       <div class="sechead"><h2>AUFGABEN</h2></div>
       ${chipsHTML(data.tasks, filter)}
       ${data.tasks.length ? `<div class="cards">${tasks.map(t => cardHTML(t, n)).join('')}</div>` : EMPTY}`;
-    app.querySelectorAll('.chip[data-f]').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f)));
+    app.querySelectorAll('.chip[data-f]').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f, topic, app.querySelector('.lectbox').open)));
+    app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => listLB(n, filter, c.dataset.topic, true)));
+  }
+
+  async function lectPage(lbSel = 'alle', topic = 'alle') {
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
+    const seq = navSeq;
+    const lect = await getLect();
+    if (seq !== navSeq) return;
+    const inLb = lbSel === 'alle' ? lect : lect.filter(v => String(v.lb) === String(lbSel));
+    const shown = topic === 'alle' ? inLb : inLb.filter(v => v.topic === topic);
+    const lbs = [...new Set(lect.map(v => v.lb))].sort();
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Vorlesungen</h1><div class="meta">${lect.length} Vorlesungen aus dem Unterricht · nach Lernbereich und Thema filtern</div></div></div>
+      ${lect.length ? `<div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE LB' : 'LB' + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
+      ${lbSel === 'alle' ? '' : topicChips(inLb, topic)}
+      <div class="cards">${shown.map(v => lectCardHTML(v)).join('')}</div>`
+      : '<p class="empty" style="margin:18px 0">Noch keine Vorlesungen – Lehrkräfte können PDFs über „Hochladen“ einreichen. Sie werden automatisch einem Lernbereich, einem Thema und passenden Prüfungsaufgaben zugeordnet.</p>'}`;
+    app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => lectPage(c.dataset.lb, 'alle')));
+    app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => lectPage(lbSel, c.dataset.topic)));
+  }
+
+  async function viewer(id) {
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE DOKUMENT …</p>';
+    const seq = navSeq;
+    const list = await getLect();
+    const v = list.find(x => x.id === id);
+    if (!v) { location.hash = '#/vorlesungen'; return; }
+    if (!blobCache[id]) {
+      const buf = await decryptFile(key, `data/v/${id}.bin`);
+      blobCache[id] = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+    }
+    if (seq !== navSeq) return;
+    const url = blobCache[id];
+    let tasksHTML = '';
+    if ((v.tasks || []).length) {
+      const all = await getTasks();
+      if (seq !== navSeq) return;
+      const found = all.filter(t => v.tasks.includes(t.id)).map(t => `<a class="minitask" href="#/lb/${t.lbs.includes(+v.lb) ? v.lb : t.lbs[0]}/${t.id}"><b>${esc(t.year)} · ${esc(t.nr)}</b> ${esc(t.topic)}</a>`);
+      tasksHTML = `<div class="box"><div class="lbl">Passende Prüfungsaufgaben</div><div class="minitasks">${found.join('')}</div></div>`;
+    }
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/lb/${v.lb}" id="vback" aria-label="Zurück">←</a>
+        <div><h1>${esc(v.title)}</h1><div class="meta">LB${v.lb} · ${esc(LB[v.lb] ? LB[v.lb].full : '')} · ${v.pages} Seiten</div></div></div>
+      <div class="task-layout">
+        <aside class="side">
+          <div class="box" style="display:grid;gap:8px">
+            <div class="lbl">Dokument</div>
+            <a class="btn" href="${url}" target="_blank" rel="noopener">IN NEUEM TAB ÖFFNEN</a>
+            <a class="btn ghost" href="${url}" download="${esc(v.file)}">HERUNTERLADEN</a>
+          </div>
+          ${tasksHTML}
+        </aside>
+        <div class="pdfwrap"><iframe class="pdf" src="${url}#view=FitH" title="${esc(v.title)}"></iframe>
+          <p class="pdfhint">Wird das Dokument nicht angezeigt (z. B. am Handy)? Nutze „In neuem Tab öffnen“ oder „Herunterladen“.</p></div>
+      </div>`;
+    document.getElementById('vback').addEventListener('click', e => { if (history.length > 1) { e.preventDefault(); history.back(); } });
+    window.scrollTo(0, 0);
   }
 
   async function listAll() {
@@ -409,11 +509,12 @@
   async function taskPage(n, id) {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const seq = navSeq;
-    const data = await getLB(n);
+    const [data, lectAll] = await Promise.all([getLB(n), getLect()]);
     if (seq !== navSeq) return;
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
+    const tl = lectAll.filter(v => (v.tasks || []).includes(t.id)).map(v => v.id);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/lb/${n}" aria-label="Zurück">←</a>
         <div><h1>${esc(t.topic)}</h1><div class="meta">LB${n} · ${esc(plain(LB[n].name))} · ${label(t)}</div></div></div>
@@ -431,6 +532,7 @@
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
+            <button class="btn lectbtn" id="lectBtn" ${tl.length ? '' : 'disabled'}>📚 ${tl.length ? `VORLESUNG${tl.length > 1 ? 'EN' : ''} (${tl.length})` : 'KEINE VORLESUNG'}</button>
             <div class="nav2">
               ${prev ? `<a class="btn ghost" href="#/lb/${n}/${prev.id}">← ZURÜCK</a>` : '<button class="btn ghost" disabled>← ZURÜCK</button>'}
               ${next ? `<a class="btn ghost" href="#/lb/${n}/${next.id}">WEITER →</a>` : '<button class="btn ghost" disabled>WEITER →</button>'}
@@ -460,7 +562,100 @@
     document.getElementById('showSol2').onclick = reveal;
     bindTimer(t.id);
     loadFigs();
+    document.getElementById('lectBtn').onclick = () => {
+      const items = tl.map(id => lectAll.find(v => v.id === id)).filter(Boolean);
+      document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}${isNew(v) ? ' <em class="neu">NEU</em>' : ''}</b><small>LB${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      openModal('lect');
+    };
     window.scrollTo(0, 0);
+  }
+
+  /* ---------- Upload (Lehrkräfte) ---------- */
+  const UPLOAD = window.__UPLOAD || '';
+  function uploadPage() {
+    const code = store.get('localStorage', 'abi-upcode') || '';
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Vorlesung hochladen · Geso</h1><div class="meta">Für Lehrkräfte · PDFs für Gesundheit und Soziales werden automatisch eingeordnet, verschlüsselt und veröffentlicht</div></div></div>
+      ${UPLOAD ? '' : '<p class="empty" style="margin:18px 0">⚠️ Der Upload-Dienst ist noch nicht eingerichtet.</p>'}
+      <div class="uplayout">
+        <section class="panel">
+          <h2 style="color:var(--green)">⬆️ HOCHLADEN</h2>
+          <label class="fld"><span>Upload-Code</span>
+            <input id="upcode" type="password" autocomplete="off" value="${esc(code)}" placeholder="Code vom Seitenbetreiber"></label>
+          <label class="fld"><span>Lernbereich</span>
+            <select id="uplb"><option value="0">Automatisch erkennen</option>${Object.entries(LB).map(([n, l]) => `<option value="${n}">LB${n} · ${esc(plain(l.full))}</option>`).join('')}</select></label>
+          <label class="drop" id="drop">
+            <input type="file" id="upfile" accept="application/pdf,.pdf" multiple hidden>
+            <span class="dropico">📄</span>
+            <b>PDF hierher ziehen</b><small>oder klicken zum Auswählen · max. 25 MB · mehrere möglich</small>
+          </label>
+          <div id="uplist" class="uplist"></div>
+        </section>
+        <aside class="panel uphelp">
+          <h2>ℹ️ SO FUNKTIONIERT'S</h2>
+          <ol>
+            <li>Upload-Code eingeben (wird im Browser gemerkt).</li>
+            <li>PDF auswählen – den Lernbereich kannst du angeben oder erkennen lassen.</li>
+            <li>Die Datei wird automatisch gelesen und einem <b>Lernbereich</b>, einem <b>Thema</b> und passenden <b>Prüfungsaufgaben</b> zugeordnet.</li>
+            <li>Nach ca. 1–2 Minuten erscheint hier das Ergebnis – und die Vorlesung ist auf der Seite.</li>
+          </ol>
+          <p class="empty">Datenschutz: Die Datei läuft über Cloudflare in ein privates GitHub-Repository, wird dort verschlüsselt und auf dieser Seite veröffentlicht; das unverschlüsselte Original wird danach gelöscht. Details: <button class="dslink" data-open="datenschutz">Datenschutzerklärung</button>.</p>
+          <p class="empty">Tipp: Aussagekräftige Dateinamen (z. B. „Stressmodell nach Lazarus.pdf“) werden als Titel verwendet.</p>
+        </aside>
+      </div>`;
+    const input = document.getElementById('upfile'), drop = document.getElementById('drop');
+    input.onchange = () => { handle([...input.files]); input.value = ''; };
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => handle([...e.dataTransfer.files]));
+  }
+  function b64file(file) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
+  }
+  async function handle(files) {
+    const code = document.getElementById('upcode').value.trim();
+    const lb = document.getElementById('uplb').value;
+    const list = document.getElementById('uplist');
+    if (!UPLOAD) { alertRow(list, 'Upload-Dienst noch nicht eingerichtet.'); return; }
+    if (!code) { alertRow(list, 'Bitte zuerst den Upload-Code eingeben.'); document.getElementById('upcode').focus(); return; }
+    store.set('localStorage', 'abi-upcode', code);
+    for (const f of files) {
+      const row = document.createElement('div'); row.className = 'uprow';
+      row.innerHTML = `<span class="upico">📄</span><div><b>${esc(f.name)}</b><small class="upst">Wird hochgeladen …</small></div>`;
+      list.prepend(row);
+      const st = row.querySelector('.upst');
+      const fail = m => { row.classList.add('err'); st.textContent = '❌ ' + m; };
+      if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { fail('Nur PDF-Dateien sind erlaubt.'); continue; }
+      if (f.size > 25 * 1048576) { fail('Datei ist größer als 25 MB.'); continue; }
+      try {
+        const body = await b64file(f);
+        const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-Fach': 'geso', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
+        const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
+        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode'); continue; }
+        row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
+        poll(j.name, code, row, st);
+      } catch (e) { fail('Keine Verbindung zum Upload-Dienst (für Geso evtl. noch nicht freigeschaltet).'); }
+    }
+  }
+  function alertRow(list, msg) { const d = document.createElement('div'); d.className = 'uprow err'; d.innerHTML = `<span class="upico">⚠️</span><div><b>${esc(msg)}</b></div>`; list.prepend(d); }
+  async function poll(name, code, row, st, tries = 0) {
+    if (!document.body.contains(row)) return;
+    if (tries > 60) { st.textContent = '⌛ Dauert länger als erwartet – das Ergebnis kommt als Meldung per E-Mail an den Seitenbetreiber.'; return; }
+    try {
+      const r = await fetch(UPLOAD + '/status?name=' + encodeURIComponent(name), { headers: { 'X-Upload-Code': code, 'X-Fach': 'geso' } });
+      const j = await r.json();
+      if (j.ok && !j.pending) {
+        const x = j.result; row.classList.remove('wait');
+        if (x.status === 'ok') {
+          row.classList.add('ok');
+          if (x.duplikat) st.innerHTML = `♻️ <b>Schon vorhanden</b> – diese Datei ist bereits auf der Seite (${esc(x.titel || '')}, LB${x.lb}) und wurde nicht doppelt eingetragen.`; else
+          st.innerHTML = `✅ Veröffentlicht als <b>LB${x.lb} · ${esc(x.thema)}</b>` + (x.aufgaben && x.aufgaben.length ? `<br>Passt zu: ${x.aufgaben.map(esc).join(' · ')}` : '<br>Keine passenden Prüfungsaufgaben gefunden.') + '<br><span class="upnote">Kann bis zu 10 Minuten dauern, bis sie bei allen erscheint.</span>';
+        } else { row.classList.add('err'); st.textContent = '❌ ' + (x.fehler || 'Konnte nicht verarbeitet werden.'); }
+        return;
+      }
+    } catch {}
+    setTimeout(() => poll(name, code, row, st, tries + 1), 5000);
   }
 
   async function randomTask() {
@@ -479,8 +674,11 @@
     const parts = h.split('/').filter(Boolean);
     try {
       if (!parts.length) return home();
-      const needsKey = ['lb', 'zufall', 'alle'].includes(parts[0]);
+      if (parts[0] === 'upload') return uploadPage();
+      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
+      if (parts[0] === 'vorlesungen') return await lectPage();
+      if (parts[0] === 'vorlesung' && parts[1]) return await viewer(parts[1]);
       if (parts[0] === 'lb' && LB[parts[1]]) return await (parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]));
       if (parts[0] === 'zufall') return await randomTask();
       if (parts[0] === 'alle') return await listAll();
