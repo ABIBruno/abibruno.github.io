@@ -13,12 +13,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=14">
+<style>@media (max-width:480px){.topbar-left .ptxt{display:none}}</style>
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
 
 <header class="topbar">
-  <button class="pill" data-open="about"><span class="ico">ⓘ</span> ABOUT</button>
+  <div class="topbar-left" style="display:flex;gap:10px"><a class="pill" href="./" title="Zurück zur Fächerauswahl" aria-label="Zurück zur Fächerauswahl" style="text-decoration:none">←<span class="ptxt"> FÄCHER</span></a><button class="pill" data-open="about" aria-label="About"><span class="ico">ⓘ</span><span class="ptxt"> ABOUT</span></button></div>
   <div class="topbar-right">
     <button class="round" id="bgBtn" title="Farben wählen (Hintergrund &amp; Schrift)" aria-label="Farben wählen">🎨</button>
     <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
