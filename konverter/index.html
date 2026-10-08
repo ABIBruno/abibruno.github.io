@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data: blob:; img-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>PDF-Konverter | ABIdasmuss</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05070f">
+<script>try{if(localStorage.getItem('abi-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+:root{--bg:#05070f;--panel:#11151f;--panel2:#161b27;--line:#262d3d;--text:#dfe6f3;--muted:#8b95ab;--cyan:#38d6ff;--violet:#b58cff;--pink:#f08ad8;--green:#5be3a1;--word:#4f8cff;--ppt:#ff8a4c;--warn:#ffcf5a;
+--grad:linear-gradient(90deg,var(--cyan) 0%,#9ad8ff 45%,var(--violet) 70%,var(--pink) 100%)}
+:root[data-theme="light"]{--bg:#eef2f9;--panel:#ffffff;--panel2:#f5f7fc;--line:#d5dcea;--text:#151a26;--muted:#5a6478}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:radial-gradient(ellipse at 50% -10%,rgba(56,214,255,.12),transparent 60%),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+.top{display:flex;align-items:center;padding:18px 22px}
+.back{color:var(--muted);text-decoration:none;font-size:.9rem;letter-spacing:.04em}
+.back:hover{color:var(--text)}
+main{flex:1;width:100%;max-width:760px;margin:0 auto;padding:12px 16px 48px}
+h1{font-family:Orbitron,sans-serif;font-weight:900;font-size:clamp(1.7rem,6vw,2.8rem);letter-spacing:.06em;margin:10px 0 8px;text-align:center;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+p.sub{color:var(--muted);margin:0 0 30px;text-align:center}
+.step{font-family:Orbitron,sans-serif;font-size:.78rem;letter-spacing:.14em;color:var(--muted);margin:26px 0 10px;text-transform:uppercase}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:170px;padding:26px;border:2px dashed var(--line);border-radius:20px;background:var(--panel);cursor:pointer;text-align:center;transition:border-color .15s,box-shadow .15s}
+.drop:hover,.drop.over,.drop:focus-visible{border-color:var(--cyan);box-shadow:0 0 30px rgba(56,214,255,.18);outline:none}
+.drop .big{font-size:2.4rem}
+.drop .hint{color:var(--muted);font-size:.9rem}
+.drop.has{border-style:solid;border-color:var(--cyan)}
+.file{font-weight:600;word-break:break-word}
+.formats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fmt{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 14px;border-radius:18px;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:center;transition:border-color .15s,box-shadow .15s}
+.fmt input{position:absolute;opacity:0;pointer-events:none}
+.fmt .ico{font-size:2rem}
+.fmt .name{font-family:Orbitron,sans-serif;font-weight:700;letter-spacing:.06em}
+.fmt .desc{color:var(--muted);font-size:.84rem}
+.fmt.word .name{color:var(--word)}
+.fmt.ppt .name{color:var(--ppt)}
+.fmt.word:has(input:checked){border-color:var(--word);box-shadow:0 0 26px rgba(79,140,255,.25)}
+.fmt.ppt:has(input:checked){border-color:var(--ppt);box-shadow:0 0 26px rgba(255,138,76,.25)}
+.fmt:has(input:focus-visible){outline:2px solid var(--cyan);outline-offset:2px}
+.modes{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.mode{display:flex;align-items:flex-start;gap:8px;flex:1 1 260px;padding:12px 14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;font-size:.9rem}
+.mode input{margin-top:3px;accent-color:var(--word)}
+.mode small{display:block;color:var(--muted);margin-top:2px}
+.mode:has(input:checked){border-color:var(--word)}
+.go{display:block;width:100%;margin-top:26px;padding:16px;border:0;border-radius:16px;background:var(--grad);color:#05070f;font-family:Orbitron,sans-serif;font-weight:700;font-size:1rem;letter-spacing:.08em;cursor:pointer;transition:filter .15s,transform .15s}
+.go:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-2px)}
+.go:disabled{opacity:.4;cursor:not-allowed}
+.progress{margin-top:18px;display:none}
+.progress.on{display:block}
+.bar{height:10px;border-radius:99px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--grad);transition:width .2s}
+.status{color:var(--muted);font-size:.9rem;margin-top:8px;text-align:center}
+.status.ok{color:var(--green)}
+.status.err{color:#ff7a7a}
+.info{margin-top:30px;padding:16px 18px;border-radius:16px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--cyan);font-size:.88rem;line-height:1.55;color:var(--muted)}
+.info b{color:var(--text)}
+.info ul{margin:6px 0 0;padding-left:18px}
+.info.warn{border-left-color:var(--warn)}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 16px;letter-spacing:.05em}
+footer a{color:var(--muted)}
+@media (max-width:520px){.formats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top"><a class="back" href="../">← Zurück zur Fächerauswahl</a></div>
+<main>
+  <h1>PDF-KONVERTER</h1>
+  <p class="sub">PDF hochladen und als Word- oder PowerPoint-Datei weiterbearbeiten</p>
+
+  <div class="step">1 · PDF auswählen</div>
+  <label class="drop" id="drop" tabindex="0">
+    <span class="big">📄</span>
+    <span class="file" id="fileName">PDF hierher ziehen oder klicken</span>
+    <span class="hint" id="fileHint">Die Datei bleibt auf deinem Gerät</span>
+    <input type="file" id="fileInput" accept="application/pdf,.pdf" hidden>
+  </label>
+
+  <div class="step">2 · Format wählen</div>
+  <div class="formats">
+    <label class="fmt word"><input type="radio" name="fmt" value="docx" checked><span class="ico">📝</span><span class="name">WORD</span><span class="desc">.docx – für Arbeitsblätter, Texte, Skripte</span></label>
+    <label class="fmt ppt"><input type="radio" name="fmt" value="pptx"><span class="ico">📽️</span><span class="name">POWERPOINT</span><span class="desc">.pptx – für Folien und Präsentationen</span></label>
+  </div>
+  <div class="modes" id="wordModes">
+    <label class="mode"><input type="radio" name="mode" value="exact" checked><span><b>Aussehen wie im PDF</b><small>Jede Seite sieht genauso aus, der Text liegt in verschiebbaren Textfeldern.</small></span></label>
+    <label class="mode"><input type="radio" name="mode" value="flow"><span><b>Fließtext</b><small>Nur der Text mit Formatierung – am einfachsten zum Weiterschreiben, ohne Grafiken.</small></span></label>
+  </div>
+
+  <button class="go" id="go" disabled>UMWANDELN</button>
+  <div class="progress" id="progress"><div class="bar"><span id="barFill"></span></div><div class="status" id="status"></div></div>
+
+  <div class="info">
+    <b>🔒 Deine Datei wird nicht hochgeladen.</b> Die Umwandlung passiert komplett in deinem Browser – kein Server sieht das PDF.
+  </div>
+  <div class="info warn">
+    <b>So funktioniert's:</b>
+    <ul>
+      <li>Der <b>Text</b> wird bearbeitbar – mit Schriftart, Größe, Farbe, Fett/Kursiv und an derselben Stelle wie im PDF.</li>
+      <li><b>Bilder, Linien, Tabellenrahmen und Hintergründe</b> bleiben als Hintergrundbild der Seite erhalten (sehen gleich aus, sind aber nicht einzeln änderbar).</li>
+      <li><b>Eingescannte PDFs</b> (nur Foto der Seite, kein echter Text) kommen als Bild heraus – dort lässt sich nichts tippen.</li>
+      <li>Fehlt eine Schriftart auf deinem PC, nimmt Word/PowerPoint eine ähnliche – dann kann sich ein Wort leicht verschieben.</li>
+    </ul>
+  </div>
+</main>
+<footer>© 2026 ABIDASMUSS · Verwendet pdf.js, docx und PptxGenJS (Open Source)</footer>
+
+<script src="lib/pdf.min.js"></script>
+<script src="lib/docx.umd.js"></script>
+<script src="lib/pptxgen.bundle.js"></script>
+<script src="konverter.js"></script>
+</body>
+</html>
