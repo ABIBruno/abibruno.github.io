@@ -606,6 +606,7 @@
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
     bindTimer(t.id);
+    addPrintButtons(t, n);
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
       const items = tl.map(id => lect.find(v => v.id === id)).filter(Boolean);
@@ -619,6 +620,62 @@
       openModal('lect');
     };
     window.scrollTo(0, 0);
+  }
+
+  /* ---------- Arbeitsblätter / Lösung als PDF drucken ---------- */
+  function printSheet(t, n, nodes, kind) {
+    let area = document.getElementById('printArea');
+    if (!area) { area = document.createElement('div'); area.id = 'printArea'; document.body.appendChild(area); }
+    const body = document.createElement('div');
+    body.className = 'pbody';
+    nodes.forEach(nd => body.appendChild(nd.cloneNode(true)));
+    body.querySelectorAll('.printbtn, .printbar').forEach(b => b.remove());
+    body.querySelectorAll('table.bab td').forEach(td => { if (!td.textContent.replace(/\u00a0/g, '').trim()) td.classList.add('fill'); });
+    const wide = [...body.querySelectorAll('table.bab tr')].some(r => r.children.length > 6);
+    area.className = wide ? 'wide' : '';
+    area.innerHTML = `<div class="phead"><div><b>${kind === 'sol' ? 'LÖSUNG' : 'ARBEITSBLATT'}</b> · ${esc(label(t))}</div><div>VBWL · LB${n} · ${esc(t.topic)}</div></div>` +
+      (kind === 'sol' ? '' : '<div class="pname"><span>Name: ______________________________</span><span>Datum: ______________</span></div>');
+    area.appendChild(body);
+    area.insertAdjacentHTML('beforeend', `<div class="pfoot">ABIdasmuss · abibruno.github.io${kind === 'sol' ? '' : ' · Lösung auf der Webseite'}</div>`);
+    document.body.classList.add('printing');
+    const done = () => { document.body.classList.remove('printing'); area.innerHTML = ''; window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => window.print(), 50);
+  }
+  function addPrintButtons(t, n) {
+    const content = app.querySelector('.panel.aufgabe .content');
+    if (content) content.querySelectorAll(':scope > .tblwrap').forEach(w => {
+      const blank = [...w.querySelectorAll('table.bab td')].some(td => !td.textContent.replace(/\u00a0/g, '').trim());
+      if (!blank) return;   // nur echte Arbeitsblätter (mit leeren Feldern)
+      // Aufgabentext ab der letzten Zwischenüberschrift bis zur Tabelle mitdrucken
+      // bei Teilaufgaben (z. B. 3.1.2) auch die Geschwister (3.1.1) und die Oberaufgabe (3.1) mit Angaben
+      const num = h => ((h.textContent.match(/\d+(?:\.\d+)+/) || [''])[0]);
+      const nodes = [w];
+      let el = w.previousElementSibling, parent = null;
+      while (el) {
+        nodes.unshift(el);
+        if (el.matches('h3.sub')) {
+          const k = num(el);
+          if (parent === null) parent = k.split('.').length >= 3 ? k.split('.').slice(0, -1).join('.') : '';
+          if (!parent || k === parent || !k.startsWith(parent + '.')) break;
+        }
+        el = el.previousElementSibling;
+      }
+      if (nodes[0].matches('h3.sub') && parent && !num(nodes[0]).startsWith(parent)) nodes.shift();
+      const bar = document.createElement('div');
+      bar.className = 'printbar';
+      bar.innerHTML = '<button class="btn ghost printbtn" type="button">🖨️ ARBEITSBLATT ALS PDF</button>';
+      bar.querySelector('button').onclick = () => printSheet(t, n, nodes, 'task');
+      w.after(bar);
+    });
+    const sb = document.getElementById('solBody');
+    if (sb && sb.querySelector('table.bab')) {
+      const bar = document.createElement('div');
+      bar.className = 'printbar';
+      bar.innerHTML = '<button class="btn ghost printbtn" type="button">🖨️ LÖSUNG ALS PDF</button>';
+      bar.querySelector('button').onclick = () => printSheet(t, n, [...sb.children].filter(c => c !== bar), 'sol');
+      sb.appendChild(bar);
+    }
   }
 
   /* ---------- Upload (Lehrkräfte) ---------- */

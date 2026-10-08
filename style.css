@@ -472,3 +472,41 @@ html.customfg :is(.subtitle,.sechead h2,.sechead h2 span,.sechead h2 b,.tile .t,
 .modal-box.legal a{color:var(--cyan)}
 .modal-box.legal .dsstand{color:var(--muted);font-size:12px}
 .uphelp .dslink{background:none;border:0;padding:0;color:var(--cyan);font:inherit;text-decoration:underline;cursor:pointer}
+
+/* ---------- Arbeitsblatt / Lösung drucken ---------- */
+.printbar{display:flex;justify-content:flex-end;margin:-8px 0 16px}
+.printbar .btn{font-size:12px;padding:8px 14px}
+#printArea{display:none}
+@page{size:A4;margin:14mm 12mm}
+@page wide{size:A4 landscape;margin:12mm}
+@media print{
+  body.printing{background:#fff!important;color:#000!important}
+  body.printing>*:not(#printArea){display:none!important}
+  body.printing #printArea{display:block!important;font-family:Inter,Arial,sans-serif;font-size:10.5pt;line-height:1.4;color:#000}
+  #printArea.wide{page:wide}
+  #printArea .phead{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:8px;font-size:9.5pt}
+  #printArea .pname{display:flex;justify-content:space-between;margin:10px 0 14px;font-size:10pt}
+  #printArea .pfoot{margin-top:14px;border-top:1px solid #999;padding-top:4px;font-size:8pt;color:#555}
+  #printArea *{color:#000!important;background:transparent!important;box-shadow:none!important;text-shadow:none!important}
+  #printArea h3.sub{font-family:Inter,Arial,sans-serif;font-size:11pt;letter-spacing:0;margin:10px 0 6px;font-weight:700}
+  #printArea .be{border:1px solid #000;border-radius:8px;padding:0 6px;font-size:8.5pt;margin-left:8px}
+  #printArea p{margin:4px 0 8px}
+  #printArea .note{color:#333!important;font-size:9pt}
+  #printArea .tblwrap{overflow:visible;border:none;margin:6px 0 12px}
+  #printArea table.bab{width:100%;border-collapse:collapse;font-size:9.5pt;font-variant-numeric:tabular-nums;page-break-inside:avoid;break-inside:avoid}
+  #printArea table.bab th,#printArea table.bab td{border:1px solid #000;padding:4px 6px;text-align:right;white-space:normal;position:static}
+  #printArea table.bab th{font-weight:700;font-size:9pt;text-align:center;background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea table.bab th:first-child,#printArea table.bab td.lbl{text-align:left}
+  #printArea table.bab td.lbl{min-width:0;width:22%}
+  #printArea table.bab td small{display:block;font-size:7.5pt;color:#444!important}
+  #printArea table.bab td.fill{height:30px}
+  #printArea table.bab tr.total td,#printArea table.bab tr.res td{font-weight:700}
+  #printArea table.bab tr.total td{border-top:2px solid #000}
+  #printArea .neg{color:#b00020!important}#printArea .pos{color:#006b3c!important}
+  #printArea .neg,#printArea .pos{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea .info{border:1px solid #999;border-radius:6px;padding:6px 10px;margin:8px 0}
+  #printArea ul{margin:4px 0 8px;padding-left:18px}
+  #printArea table.bab.kalk{width:auto;min-width:55%}
+  #printArea table.bab.kalk td.lbl{width:auto}
+  #printArea .note,#printArea h3.sub{break-after:avoid;page-break-after:avoid}
+}
