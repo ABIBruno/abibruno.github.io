@@ -3,7 +3,7 @@
    aus dem Passwort) in data/t.js und werden erst im Browser nach Passworteingabe entschlüsselt.
    Statt Lernbereichen gibt es die sechs Aufgabenarten des Deutsch-Abiturs (AA1–AA6); jede Aufgabe
    kennt ihre Aufgabenart(en) im Feld „lbs“ (gleiches Datenformat wie bei Geso).
-   Grundgerüst: Vorlesungen werden angezeigt, sobald data/lect.js existiert; kein Hochladen, kein Privat-Bereich. */
+   Material (Theorie, Arbeitsblätter) in data/lect.js + data/v/, Hochladen über den Briefkasten (eingang-deutsch/); kein Privat-Bereich. */
 (() => {
   'use strict';
 
@@ -404,8 +404,10 @@
       <div class="sechead"><h2>EXTRAS</h2></div>
       <div class="tiles extras">
         <a class="tile" style="--accent:var(--gold)" href="#/ueberblick"><span class="emoji">🗓️</span><span class="t">Abi 2027</span><span class="s">Überblick &amp; Pflichtlektüre</span></a>
+        <a class="tile" style="--accent:var(--sky)" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Material</span><span class="s">Theorie &amp; Übungen</span></a>
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">${total()} Aufgaben</span></a>
+        <a class="tile" style="--accent:var(--green)" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -477,7 +479,7 @@
       ${lect.length ? `<div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE' : TAG + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
       ${lbSel === 'alle' ? '' : topicChips(inLb, topic)}
       <div class="cards">${shown.map(v => lectCardHTML(v)).join('')}</div>`
-      : '<p class="empty" style="margin:18px 0">Noch kein Unterrichtsmaterial eingetragen.</p>'}`;
+      : '<p class="empty" style="margin:18px 0">Noch kein Unterrichtsmaterial – Lehrkräfte können PDFs über „Hochladen“ einreichen. Sie werden automatisch einem Aufgabenformat, einem Thema und passenden Prüfungsaufgaben zugeordnet.</p>'}`;
     app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => lectPage(c.dataset.lb, 'alle')));
     app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => lectPage(lbSel, c.dataset.topic)));
   }
@@ -673,6 +675,94 @@
     window.scrollTo(0, 0);
   }
 
+  /* ---------- Upload (Lehrkräfte) ---------- */
+  const UPLOAD = window.__UPLOAD || '';
+  function uploadPage() {
+    const code = store.get('localStorage', 'abi-upcode') || '';
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Material hochladen · Deutsch</h1><div class="meta">Für Lehrkräfte · PDFs (Theorie, Arbeitsblätter, Lösungen) werden automatisch eingeordnet, verschlüsselt und veröffentlicht</div></div></div>
+      ${UPLOAD ? '' : '<p class="empty" style="margin:18px 0">⚠️ Der Upload-Dienst ist noch nicht eingerichtet.</p>'}
+      <div class="uplayout">
+        <section class="panel">
+          <h2 style="color:var(--green)">⬆️ HOCHLADEN</h2>
+          <label class="fld"><span>Upload-Code</span>
+            <input id="upcode" type="password" autocomplete="off" value="${esc(code)}" placeholder="Code vom Seitenbetreiber"></label>
+          <label class="fld"><span>Aufgabenformat</span>
+            <select id="uplb"><option value="0">Automatisch erkennen</option>${Object.entries(LB).map(([n, l]) => `<option value="${n}">${esc(l.name)} – ${esc(plain(l.full))}</option>`).join('')}</select></label>
+          <label class="drop" id="drop">
+            <input type="file" id="upfile" accept="application/pdf,.pdf" multiple hidden>
+            <span class="dropico">📄</span>
+            <b>PDF hierher ziehen</b><small>oder klicken zum Auswählen · max. 25 MB · mehrere möglich</small>
+          </label>
+          <div id="uplist" class="uplist"></div>
+        </section>
+        <aside class="panel uphelp">
+          <h2>ℹ️ SO FUNKTIONIERT'S</h2>
+          <ol>
+            <li>Upload-Code eingeben (wird im Browser gemerkt).</li>
+            <li>PDF auswählen – das Aufgabenformat (z. B. Lyrik, Drama, Textanalyse) kannst du angeben oder erkennen lassen.</li>
+            <li>Die Datei wird automatisch gelesen und einem <b>Aufgabenformat</b>, einem <b>Thema</b> und passenden <b>Prüfungsaufgaben</b> (Grund- und Leistungskurs) zugeordnet. Nennt die Datei ein Werk oder einen Autor aus einer Prüfung, wird diese Aufgabe bevorzugt.</li>
+            <li>Nach ca. 1–2 Minuten erscheint hier das Ergebnis – und das Material ist auf der Seite.</li>
+          </ol>
+          <p class="empty">Datenschutz: Die Datei läuft über Cloudflare in ein privates GitHub-Repository, wird dort verschlüsselt und auf dieser Seite veröffentlicht; das unverschlüsselte Original wird danach gelöscht. Details: <button class="dslink" data-open="datenschutz">Datenschutzerklärung</button>.</p>
+          <p class="empty">Tipp: Aussagekräftige Dateinamen (z. B. „Charakterisierung Dorfrichter Adam.pdf“) werden als Titel verwendet.</p>
+        </aside>
+      </div>`;
+    const input = document.getElementById('upfile'), drop = document.getElementById('drop');
+    input.onchange = () => { handle([...input.files]); input.value = ''; };
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => handle([...e.dataTransfer.files]));
+  }
+  function b64file(file) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
+  }
+  async function handle(files) {
+    const code = document.getElementById('upcode').value.trim();
+    const lb = document.getElementById('uplb').value;
+    const list = document.getElementById('uplist');
+    if (!UPLOAD) { alertRow(list, 'Upload-Dienst noch nicht eingerichtet.'); return; }
+    if (!code) { alertRow(list, 'Bitte zuerst den Upload-Code eingeben.'); document.getElementById('upcode').focus(); return; }
+    store.set('localStorage', 'abi-upcode', code);
+    for (const f of files) {
+      const row = document.createElement('div'); row.className = 'uprow';
+      row.innerHTML = `<span class="upico">📄</span><div><b>${esc(f.name)}</b><small class="upst">Wird hochgeladen …</small></div>`;
+      list.prepend(row);
+      const st = row.querySelector('.upst');
+      const fail = m => { row.classList.add('err'); st.textContent = '❌ ' + m; };
+      if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { fail('Nur PDF-Dateien sind erlaubt.'); continue; }
+      if (f.size > 25 * 1048576) { fail('Datei ist größer als 25 MB.'); continue; }
+      try {
+        const body = await b64file(f);
+        const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-Fach': 'deutsch', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
+        const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
+        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode'); continue; }
+        row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
+        poll(j.name, code, row, st);
+      } catch (e) { fail('Keine Verbindung zum Upload-Dienst (für Deutsch evtl. noch nicht freigeschaltet).'); }
+    }
+  }
+  function alertRow(list, msg) { const d = document.createElement('div'); d.className = 'uprow err'; d.innerHTML = `<span class="upico">⚠️</span><div><b>${esc(msg)}</b></div>`; list.prepend(d); }
+  async function poll(name, code, row, st, tries = 0) {
+    if (!document.body.contains(row)) return;
+    if (tries > 60) { st.textContent = '⌛ Dauert länger als erwartet – das Ergebnis kommt als Meldung per E-Mail an den Seitenbetreiber.'; return; }
+    try {
+      const r = await fetch(UPLOAD + '/status?name=' + encodeURIComponent(name), { headers: { 'X-Upload-Code': code, 'X-Fach': 'deutsch' } });
+      const j = await r.json();
+      if (j.ok && !j.pending) {
+        const x = j.result; row.classList.remove('wait');
+        if (x.status === 'ok') {
+          row.classList.add('ok');
+          if (x.duplikat) st.innerHTML = `♻️ <b>Schon vorhanden</b> – diese Datei ist bereits auf der Seite (${esc(x.titel || '')}, ${esc(LB[x.lb] ? LB[x.lb].name : '')}) und wurde nicht doppelt eingetragen.`; else
+          st.innerHTML = `✅ Veröffentlicht als <b>${esc(LB[x.lb] ? LB[x.lb].name : 'Format ' + x.lb)} · ${esc(x.thema)}</b>` + (x.aufgaben && x.aufgaben.length ? `<br>Passt zu: ${x.aufgaben.map(esc).join(' · ')}` : '<br>Keine passenden Prüfungsaufgaben gefunden.') + '<br><span class="upnote">Kann bis zu 10 Minuten dauern, bis sie bei allen erscheint.</span>';
+        } else { row.classList.add('err'); st.textContent = '❌ ' + (x.fehler || 'Konnte nicht verarbeitet werden.'); }
+        return;
+      }
+    } catch {}
+    setTimeout(() => poll(name, code, row, st, tries + 1), 5000);
+  }
+
   async function randomTask() {
     const pool = (await getTasksK()).map(t => [t.lbs[0], t.id]);
     if (!pool.length) { app.innerHTML = `<div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a><div><h1>Zufallsaufgabe</h1></div></div>${EMPTY}`; return; }
@@ -691,6 +781,7 @@
       if (!parts.length) return home();
       const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung', 'pdf'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
+      if (parts[0] === 'upload') return uploadPage();
       if (parts[0] === 'ueberblick') return overview();
       if (parts[0] === 'vorlesungen') return await lectPage();
       if (parts[0] === 'vorlesung' && parts[1]) return await viewer(parts[1]);
