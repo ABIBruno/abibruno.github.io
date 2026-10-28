@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>ABIdasmuss | Deutsch-Abiturtrainer</title>
-<meta name="description" content="Abiturprüfungen Deutsch nach Aufgabenarten – Aufgaben und Erwartungsbilder.">
+<meta name="description" content="Abiturprüfungen Deutsch (Grund- und Leistungskurs) nach Aufgabenformaten – Aufgaben und Erwartungshorizonte.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05070f">
 <script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
@@ -25,6 +25,41 @@
 .gmat small{color:var(--muted);font-size:12px}
 .gmat .gfig{display:block;max-width:100%;height:auto;border-radius:10px;background:#fff;margin:8px 0;white-space:normal}
 :root[data-theme="light"] .gmatbox summary,:root[data-theme="light"] .gmat .mh{color:#0270a0}
+/* Deutsch */
+.side .kv{gap:12px}.side .kv b{text-align:right}
+:root{--lb7:#7fe3d6;--lb8:#ff7f8f}
+:root[data-theme="light"]{--lb7:#0b7f72;--lb8:#c02a45}
+.tiles.lbtiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.tiles.lbtiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kursbar{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+.kchip{font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:.14em;padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:rgba(17,21,31,.75);color:var(--muted);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.kchip small{font-family:Inter,sans-serif;letter-spacing:0;opacity:.8}
+.kchip:hover,.kchip:focus-visible{color:var(--text);border-color:var(--violet);outline:none}
+.kchip.on{color:#fff;border-color:var(--violet);background:linear-gradient(90deg,rgba(56,214,255,.18),rgba(181,140,255,.25));box-shadow:0 0 18px rgba(181,140,255,.25)}
+:root[data-theme="light"] .kchip{background:#fff}
+:root[data-theme="light"] .kchip.on{color:#151a26}
+.badge.kurs.gk{color:var(--green);border-color:rgba(91,227,161,.45)}
+.badge.kurs.lk{color:var(--violet);border-color:rgba(181,140,255,.5)}
+.pflichtnote{margin:0 0 12px;padding:10px 14px;border-radius:12px;background:rgba(255,210,74,.08);border:1px solid rgba(255,210,74,.35);font-size:14px}
+.content .tnr{padding-left:1.6em;text-indent:-1.6em}
+.content .pct{color:var(--muted);font-size:13px;white-space:nowrap}
+.ewhint{color:var(--muted);font-size:13px;margin:0 0 14px}
+.ewb h4.ewh{font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.14em;color:var(--green);margin:22px 0 8px;text-transform:uppercase}
+.ewb h4.ewh:first-child{margin-top:0}
+.ewb p.ewp{font-weight:600;margin:14px 0 4px}
+.ewb ul{margin:4px 0 8px}.ewb li{margin:3px 0;line-height:1.55}
+.ewb ul ul{margin:3px 0}
+.ovgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.ovgrid .panel + .panel{margin-top:0}
+.ovgrid h2{font-size:14px}
+.ovgrid h3{font-size:14px;margin:6px 0 4px;color:var(--sky)}
+.ov2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ovl{padding-left:20px;margin:6px 0 10px}.ovl li{margin:4px 0}
+.ovl a{color:inherit}
+.ovlink{display:inline;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ovlink:hover,.ovlink:focus-visible{color:var(--gold)}
+.ovgrid .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px dashed var(--line)}
+@media (max-width:760px){.ovgrid,.ov2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -79,7 +114,7 @@
     <h2 id="bgTitle">FARBEN</h2>
     <div class="bgtabs" role="tablist"><button class="bgtab on" data-mode="bg" role="tab">🖼️ Hintergrund</button><button class="bgtab" data-mode="fg" role="tab">🔤 Überschriften</button></div>
     <p id="bgHint"></p>
-    <div id="fgPreview" class="fgprev"><span class="fgh">ÜBERSCHRIFT · AUFGABENART 2</span> <b></b></div>
+    <div id="fgPreview" class="fgprev"><span class="fgh">ÜBERSCHRIFT · LYRIK</span> <b></b></div>
     <div id="bgGrid" class="bggrid"></div>
     <div class="bgact"><button class="btn" id="bgReset">STANDARD</button><button class="btn ghost" data-close>FERTIG</button></div>
   </div>
@@ -89,9 +124,10 @@
   <div class="modal-box">
     <div class="modal-icon">🎓</div>
     <h2>ÜBER ABIDASMUSS · DEUTSCH</h2>
-    <p>Die Aufgaben der sächsischen Abiturprüfungen im Fach Deutsch (Berufliches Gymnasium) – sortiert nach den sechs Aufgabenarten des Deutsch-Abiturs: Interpretation, Sachtextanalyse, literarische und textgebundene Erörterung sowie materialgestütztes Informieren und Argumentieren.</p>
-    <p>Zu jeder Aufgabe gibt es die Textgrundlage mit Zeilennummern und ein Erwartungsbild. Über die Suche findest du Aufgaben auch nach Autor, Werk oder Epoche.</p>
-    <p>Tipp: Erst selbst schreiben (oder wenigstens gliedern), dann das Erwartungsbild aufklappen.</p>
+    <p>Alle Aufgaben der sächsischen Abiturprüfungen im Fach Deutsch am Beruflichen Gymnasium 2020–2026 – <b>Grund- und Leistungskurs</b>, sortiert nach den Aufgabenformaten aus dem Abi-Überblick 2026/27.</p>
+    <p>Oben wählst du <b>Alle Kurse, Grundkurs oder Leistungskurs</b> – die Auswahl gilt für Kacheln, Listen, Suche und Zufallsaufgabe und wird gemerkt.</p>
+    <p>Zu jeder Aufgabe gibt es die Textgrundlage mit Zeilennummern, den offiziellen Erwartungshorizont in Stichpunkten und beides als Original-PDF. Werke, die 2027 Pflichtlektüre sind, tragen das Zeichen 📌.</p>
+    <p>Tipp: Erst selbst gliedern oder schreiben, dann den Erwartungshorizont aufklappen.</p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
 </div>
@@ -126,8 +162,8 @@
   </div>
 </div>
 
-<script>window.__V = "1";</script>
-<script src="data/meta.js?v=1"></script>
-<script src="app.js?v=1"></script>
+<script>window.__V = "2";</script>
+<script src="data/meta.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

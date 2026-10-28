@@ -8,16 +8,19 @@
   'use strict';
 
   const META = window.__META;
-  // Aufgabenarten des Deutsch-Abiturs (Bildungsstandards der KMK) – Bezeichnungen hier zentral änderbar
-  const TAG = 'AA';
+  // Aufgabenformate laut Überblick Abitur Deutsch 2026/27 (eine Aufgabe kann mehrere Formate haben)
+  const TAG = 'F';
   const LB = {
-    1: { name: 'Interpretation', full: 'Interpretation literarischer Texte', emoji: '📖', accent: 'var(--lb1)' },
-    2: { name: 'Sachtext\u00ADanalyse', full: 'Analyse pragmatischer Texte (Sachtexte)', emoji: '📰', accent: 'var(--lb2)' },
-    3: { name: 'Literarische Erörterung', full: 'Erörterung literarischer Texte', emoji: '🎭', accent: 'var(--lb3)' },
-    4: { name: 'Textgebundene Erörterung', full: 'Erörterung pragmatischer Texte', emoji: '⚖️', accent: 'var(--lb4)' },
-    5: { name: 'Informieren', full: 'Materialgestütztes Verfassen informierender Texte', emoji: '🗂️', accent: 'var(--lb5)' },
-    6: { name: 'Argumentieren', full: 'Materialgestütztes Verfassen argumentierender Texte', emoji: '💬', accent: 'var(--lb6)' },
+    1: { name: 'Lyrik', full: 'Interpretation & vergleichende Interpretation Lyrik', emoji: '📜', accent: 'var(--lb1)' },
+    2: { name: 'Kurzepik', full: 'Interpretation Kurzepik (Kurzgeschichte, Parabel, Kurzprosa)', emoji: '📖', accent: 'var(--lb2)' },
+    3: { name: 'Epik', full: 'Interpretation Epik (Romanauszug, Novelle, Pflichtlektüre)', emoji: '📚', accent: 'var(--lb3)' },
+    4: { name: 'Drama', full: 'Interpretation Drama (Dramenauszug, Pflichtlektüre)', emoji: '🎭', accent: 'var(--lb4)' },
+    5: { name: 'Literarische Erörterung', full: 'Literarische Erörterung', emoji: '🖋️', accent: 'var(--lb5)' },
+    6: { name: 'Textanalyse', full: 'Textanalyse – häufig mit textgebundener Erörterung', emoji: '📰', accent: 'var(--lb6)' },
+    7: { name: 'Informieren', full: 'Materialgestütztes Schreiben informierender Texte', emoji: '🗂️', accent: 'var(--lb7)' },
+    8: { name: 'Argumentieren', full: 'Materialgestütztes Schreiben argumentierender Texte', emoji: '💬', accent: 'var(--lb8)' },
   };
+  const KURS = { GK: 'Grundkurs', LK: 'Leistungskurs' };
   const PART = { P: 'Pflichtaufgabe', W: 'Wahlaufgabe' };
 
   const app = document.getElementById('app');
@@ -26,6 +29,7 @@
   let pending = null;
 
   const KEYNAME = 'abi-deutsch-key';   // eigener Schlüssel-Speicher, damit sich die Fächer nicht in die Quere kommen
+  const KURSNAME = 'abi-deutsch-kurs';
 
   /* ---------- Speicher (sicher gekapselt) ---------- */
   const store = {
@@ -74,7 +78,22 @@
       return (cache.t = JSON.parse(await decrypt(key, window.__ENC.t)).tasks.sort(sortT));
     });
   }
-  const getLB = async n => ({ tasks: (await getTasks()).filter(t => t.lbs.includes(+n)) });
+  // Kursfilter (GK / LK / alle) – wird im Browser gemerkt
+  let kurs = (() => { const k = store.get('localStorage', KURSNAME); return k === 'GK' || k === 'LK' ? k : 'alle'; })();
+  const inKurs = t => kurs === 'alle' || t.kurs === kurs;
+  const getTasksK = async () => (await getTasks()).filter(inKurs);
+  const getLB = async n => ({ tasks: (await getTasksK()).filter(t => t.lbs.includes(+n)) });
+  const cnt = n => { const l = META.lbs[n] || {}; return kurs === 'alle' ? (l.count || 0) : (l[kurs] || 0); };
+  const total = () => kurs === 'alle' ? (META.total || 0) : ((META.kurs || {})[kurs] || 0);
+  function kursBar() {
+    const opt = [['alle', 'ALLE KURSE', META.total || 0], ['GK', 'GRUNDKURS', (META.kurs || {}).GK || 0], ['LK', 'LEISTUNGSKURS', (META.kurs || {}).LK || 0]];
+    return `<div class="kursbar" role="group" aria-label="Kurs wählen">${opt.map(([k, t, n]) => `<button class="kchip${k === kurs ? ' on' : ''}" data-kurs="${k}" aria-pressed="${k === kurs}">${t}<small>${n}</small></button>`).join('')}</div>`;
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-kurs]'); if (!b) return;
+    kurs = b.dataset.kurs; store.set('localStorage', KURSNAME, kurs);
+    const y = scrollY; render(); requestAnimationFrame(() => scrollTo(0, y));
+  });
   async function decryptFile(k, url) {
     const res = await fetch(url + '?v=' + (window.__V || '1'));
     if (!res.ok) throw new Error('Datei nicht gefunden: ' + url);
@@ -145,6 +164,7 @@
       for (const k in lbLoading) delete lbLoading[k];
       for (const k in figCache) { URL.revokeObjectURL(figCache[k]); delete figCache[k]; }
       for (const k in blobCache) { URL.revokeObjectURL(blobCache[k]); delete blobCache[k]; }
+      for (const k in pdfCache) { URL.revokeObjectURL(pdfCache[k]); delete pdfCache[k]; }
       lectCache = null;
       store.del('sessionStorage', KEYNAME); updateLockBtn();
       location.hash = '#/';
@@ -232,7 +252,7 @@
   /* ---------- Hilfen ---------- */
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const twoTone = t => { const w = t.split(' '); if (w.length < 2) return `<span class="hl">${esc(t)}</span>`; const l = w.pop(); return `${esc(w.join(' '))} <span class="hl">${esc(l)}</span>`; };
-  const label = t => `Abiturprüfung ${t.year}${t.part && PART[t.part] ? ' · ' + PART[t.part] : ''} · Aufgabe ${t.nr}`;
+  const label = t => `${t.kurs ? KURS[t.kurs] + ' · ' : ''}Abitur ${t.year}${t.part && PART[t.part] ? ' · ' + PART[t.part] : ''} · Aufgabe ${t.nr}`;
   const work = t => [t.author, t.work].filter(Boolean).join(': ');
   const tags = t => t.lbs.map(n => TAG + n).join(' · ');
   const plain = html => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent || ''; };
@@ -242,10 +262,11 @@
     const acc = LB[lbn].accent;
     return `<a class="card" style="--accent:${acc}" href="#/lb/${lbn}/${t.id}">
       <div class="top">
+        <span class="badge kurs ${t.kurs === 'LK' ? 'lk' : 'gk'}">${esc(t.kurs || '')}</span>
         <span class="badge year">${t.year}</span>
         <span class="badge part">${t.part && PART[t.part] ? PART[t.part] + ' · ' : 'Aufgabe '}${esc(t.nr)}</span>
-        ${t.epoch ? `<span class="badge">${esc(t.epoch)}</span>` : ''}
-        <span class="badge be">${t.be ? t.be + ' BE · ' : ''}⏱ ${t.minutes} min</span>
+        ${t.epoch ? `<span class="badge">${esc(t.epoch)}</span>` : ''}${t.field ? `<span class="badge">${esc(t.field)}</span>` : ''}
+        ${t.pflicht ? '<span class="badge neu" title="Pflichtlektüre im Abitur 2027">📌 PFLICHT 2027</span>' : ''}
       </div>
       <h3>${twoTone(t.topic)}</h3>
       <p>${work(t) ? esc(work(t)) + ' · ' : ''}${tags(t)} · ${label(t)}</p>
@@ -356,7 +377,6 @@
   }
 
   /* ---------- Seiten ---------- */
-  const total = () => META.total || 0;
   const EMPTY = '<p class="empty" style="margin:18px 0">Hier sind noch keine Aufgaben eingetragen – die Deutsch-Abiturprüfungen folgen.</p>';
 
   function home() {
@@ -366,23 +386,24 @@
         ${key ? '' : '<span class="lockbadge">🔒</span>'}
         <span class="emoji">${l.emoji}</span>
         <span class="t">${esc(l.name)}</span>
-        <span class="s">${META.lbs[n].count} Aufgaben</span>
+        <span class="s">${cnt(n)} Aufgaben</span>
       </a>`).join('');
     app.innerHTML = `
       <section class="hero">
         <h1 class="brand">ABIdasmuss</h1>
         <p class="subtitle">Das Deutsch-Abitur-Universum</p>
-        <p class="tagline">Abiturprüfungen · nach Aufgabenarten</p>
+        <p class="tagline">Abiturprüfungen 2020 – 2026 · Grund- und Leistungskurs</p>
       </section>
       <div class="searchrow">
         <label class="search"><span>🔍</span><input id="q" type="search" placeholder="Aufgabe suchen …" autocomplete="off"></label>
       </div>
+      ${kursBar()}
       <div class="results" id="results"></div>
-      <div class="sechead"><h2><b>6</b> AUFGABENARTEN</h2></div>
+      <div class="sechead"><h2><b>8</b> AUFGABENFORMATE</h2></div>
       <div class="tiles lbtiles">${tiles}</div>
       <div class="sechead"><h2>EXTRAS</h2></div>
       <div class="tiles extras">
-        <a class="tile" style="--accent:var(--sky)" href="#/vorlesungen">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">📚</span><span class="t">Material</span><span class="s">Unterricht &amp; Epochen</span></a>
+        <a class="tile" style="--accent:var(--gold)" href="#/ueberblick"><span class="emoji">🗓️</span><span class="t">Abi 2027</span><span class="s">Überblick &amp; Pflichtlektüre</span></a>
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">${total()} Aufgaben</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
@@ -397,10 +418,10 @@
     const box = document.getElementById('results');
     term = term.trim().toLowerCase();
     if (term.length < 2) { box.innerHTML = ''; return; }
-    const all = await getTasks();
+    const all = await getTasksK();
     const hits = [];
     all.forEach(t => {
-      if (!t._txt) t._txt = [t.topic, t.year, t.author, t.work, t.epoch, t.genre, plain(t.task), plain(t.solution)].filter(Boolean).join(' ').toLowerCase();
+      if (!t._txt) t._txt = [t.topic, t.year, t.kurs, t.author, t.work, t.epoch, t.field, t.genre, t.format, plain(t.task), plain(t.solution)].filter(Boolean).join(' ').toLowerCase();
       if (t._txt.includes(term)) hits.push(cardHTML(t));
     });
     box.innerHTML = hits.length
@@ -428,16 +449,17 @@
     const shown = topic === 'alle' ? mine : mine.filter(v => v.topic === topic);
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>${TAG}${n} · ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben · ${mine.length} Materialien</div></div></div>
-      <details class="lectbox" style="--accent:${l.accent}" ${open ? 'open' : ''}>
+        <div><h1>${l.emoji} ${esc(l.name)}</h1><div class="meta">${esc(l.full)} · ${data.tasks.length} Aufgaben${kurs === 'alle' ? '' : ' im ' + KURS[kurs]}</div></div></div>
+      ${kursBar()}
+      ${mine.length ? '' : '<!--'}<details class="lectbox" style="--accent:${l.accent}" ${open ? 'open' : ''}>
         <summary><span>📚 MATERIAL ZU ${TAG}${n}</span><span class="cnt">${mine.length}</span></summary>
         ${mine.length ? `${topicChips(mine, topic)}<div class="cards small">${shown.map(v => lectCardHTML(v)).join('')}</div>`
-          : '<p class="empty">Zu dieser Aufgabenart gibt es noch kein Unterrichtsmaterial.</p>'}
-      </details>
+          : ''}
+      </details>${mine.length ? '' : '-->'}
       <div class="sechead"><h2>AUFGABEN</h2></div>
       ${chipsHTML(data.tasks, filter)}
       ${data.tasks.length ? `<div class="cards">${tasks.map(t => cardHTML(t, n)).join('')}</div>` : EMPTY}`;
-    app.querySelectorAll('.chip[data-f]').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f, topic, app.querySelector('.lectbox').open)));
+    app.querySelectorAll('.chip[data-f]').forEach(c => c.addEventListener('click', () => listLB(n, c.dataset.f, topic, (app.querySelector('.lectbox') || {}).open)));
     app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => listLB(n, filter, c.dataset.topic, true)));
   }
 
@@ -498,25 +520,90 @@
     window.scrollTo(0, 0);
   }
 
+  const pdfCache = {};
+  async function pdfPage(file, page) {
+    if (!/^[a-z0-9-]+$/.test(file)) { location.hash = '#/'; return; }
+    app.innerHTML = '<p class="loading">ENTSCHLÜSSLE PDF …</p>';
+    const seq = navSeq;
+    if (!pdfCache[file]) pdfCache[file] = URL.createObjectURL(new Blob([await decryptFile(key, `data/p/${file}.bin`)], { type: 'application/pdf' }));
+    if (seq !== navSeq) return;
+    const url = pdfCache[file], pg = Math.max(1, parseInt(page, 10) || 1);
+    const m = file.match(/^(gk|lk)(\d\d)([ae])$/);
+    const title = m ? `${m[3] === 'a' ? 'Aufgaben' : 'Erwartungshorizont'} · ${KURS[m[1].toUpperCase()]} ${'20' + m[2]}` : 'PDF';
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" id="pback" aria-label="Zurück">←</a>
+        <div><h1>${esc(title)}</h1><div class="meta">Original-PDF · startet auf Seite ${pg}</div></div></div>
+      <div class="task-layout">
+        <aside class="side"><div class="box" style="display:grid;gap:8px">
+          <div class="lbl">Dokument</div>
+          <a class="btn" href="${url}#page=${pg}" target="_blank" rel="noopener">IN NEUEM TAB ÖFFNEN</a>
+          <a class="btn ghost" href="${url}" download="Deutsch ${esc(title)}.pdf">HERUNTERLADEN</a>
+        </div></aside>
+        <div class="pdfwrap"><iframe class="pdf" src="${url}#page=${pg}&view=FitH" title="${esc(title)}"></iframe>
+          <p class="pdfhint">Wird das PDF nicht angezeigt (z. B. am Handy)? Nutze „In neuem Tab öffnen“ oder „Herunterladen“ und blättere zu Seite ${pg}.</p></div>
+      </div>`;
+    document.getElementById('pback').addEventListener('click', e => { if (history.length > 1) { e.preventDefault(); history.back(); } });
+    window.scrollTo(0, 0);
+  }
+
+  function overview() {
+    const pf = { GK: ['Robert Seethaler: Der Trafikant', 'Jenny Erpenbeck: Heimsuchung', 'Heinrich von Kleist: Der zerbrochene Krug'],
+                 LK: ['Theodor Fontane: Irrungen, Wirrungen', 'Jenny Erpenbeck: Heimsuchung', 'Heinrich von Kleist: Der zerbrochene Krug', 'Georg Büchner: Woyzeck', 'Bertolt Brecht: Der gute Mensch von Sezuan'] };
+    const q = s => s.split(': ')[1];
+    const lect = k => `<ul class="ovl">${pf[k].map(w => `<li><a class="ovlink" href="#/ueberblick" data-q="${esc(q(w))}">${esc(w)}</a></li>`).join('')}</ul>`;
+    app.innerHTML = `
+      <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
+        <div><h1>Abitur Deutsch 2026/27</h1><div class="meta">Überblick aus dem Unterricht · Grund- und Leistungskurs</div></div></div>
+      <div class="ovgrid">
+        <section class="panel"><h2>🧩 AUFGABENFORMATE</h2>
+          <ul class="ovl">${Object.entries(LB).map(([n, l]) => `<li><a href="#/lb/${n}">${l.emoji} ${esc(l.full)}</a>${n >= 7 ? ' <small>(nur schriftlich)</small>' : ''}</li>`).join('')}</ul>
+          <p class="empty">Mischformen und Kombinationen der Formate sind jederzeit möglich (z. B. Interpretation eines Romanauszugs + literarische Erörterung).</p></section>
+        <section class="panel"><h2>📌 PFLICHTLEKTÜRE</h2>
+          <div class="ov2"><div><h3>Grundkurs</h3>${lect('GK')}</div><div><h3>Leistungskurs</h3>${lect('LK')}</div></div>
+          <p class="empty">Klick auf ein Werk zeigt alle passenden Prüfungsaufgaben.</p></section>
+        <section class="panel"><h2>🔭 WEITERE THEMENFELDER</h2>
+          <ul class="ovl"><li>Sprache (Sprachwandel, Sprachverfall, Entwicklungstendenzen der Gegenwartssprache)</li><li>Kommunikation</li><li>Medien</li><li>Epochenwissen</li></ul></section>
+        <section class="panel"><h2>✍️ SCHRIFTLICHE PRÜFUNG</h2>
+          <div class="ov2"><div><h3>Grundkurs</h3><ul class="ovl"><li>255 Minuten</li><li>4 Themen zur Auswahl – du bearbeitest <b>eine</b> Aufgabe</li></ul></div>
+          <div><h3>Leistungskurs</h3><ul class="ovl"><li>300 Minuten</li><li>4 Themen zur Auswahl – du bearbeitest <b>eine</b> Aufgabe</li></ul></div></div>
+          <p class="empty">Die Aufgaben werden zentral erstellt und können alle Themen der letzten 4 Halbjahre sowie Grundwissen aus Klasse 11 enthalten.</p>
+          <div class="kv"><span>Termin</span><b>27.04.2027</b></div><div class="kv"><span>Nachtermin</span><b>24.05.2027</b></div></section>
+        <section class="panel"><h2>🗣️ MÜNDLICHE PRÜFUNG</h2>
+          <div class="ov2"><div><h3>Grundkurs</h3><ul class="ovl"><li>20 Minuten Vorbereitung</li><li>15 Minuten Präsentation der Ergebnisse</li><li>15 Minuten Prüfungsgespräch</li><li>vom Fachlehrer erstellt, zwei weitere Deutschlehrkräfte sitzen dabei</li></ul>
+            <div class="kv"><span>Termine</span><b>10.05. – 21.05.2027</b></div><div class="kv"><span>Nachtermine</span><b>31.05. – 02.06.2027</b></div></div>
+          <div><h3>Leistungskurs</h3><ul class="ovl"><li>nur als freiwillige oder verpflichtende zusätzliche Prüfung</li><li>Ablauf wie im Grundkurs</li></ul></div></div>
+          <div class="kv"><span>Zusätzliche mündliche Prüfungen</span><b>07.06. – 23.06.2027</b></div></section>
+      </div>`;
+    app.querySelectorAll('.ovlink').forEach(b => b.addEventListener('click', e => {
+      e.preventDefault();
+      const go = () => { location.hash = '#/'; setTimeout(() => { const i = document.getElementById('q'); if (i) { i.value = b.dataset.q; search(b.dataset.q); i.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 60); };
+      if (kurs !== 'alle') { kurs = 'alle'; store.set('localStorage', KURSNAME, kurs); }
+      key ? go() : requireUnlock(go);
+    }));
+    window.scrollTo(0, 0);
+  }
+
   async function listAll() {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const seq = navSeq;
-    const all = await getTasks();
+    const all = await getTasksK();
     if (seq !== navSeq) return;
     const years = [...new Set(all.map(t => String(t.year)))];
     const html = years.map(y => `<div class="sechead"><h2>ABITUR ${esc(y)}</h2></div>
-      <div class="cards">${all.filter(t => String(t.year) === y).map(t => cardHTML(t)).join('')}</div>`).join('');
+      <div class="cards">${all.filter(t => String(t.year) === y).sort((a, b) => (a.kurs || '').localeCompare(b.kurs || '') || String(a.nr).localeCompare(String(b.nr))).map(t => cardHTML(t)).join('')}</div>`).join('');
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
-        <div><h1>Alle Aufgaben</h1><div class="meta">${all.length} Aufgaben aus ${years.length} Prüfungen</div></div></div>
+        <div><h1>Alle Aufgaben</h1><div class="meta">${all.length} Aufgaben aus ${new Set(all.map(t => t.kurs + t.year)).size} Prüfungen</div></div></div>
+      ${kursBar()}
       ${html || EMPTY}`;
   }
 
   async function taskPage(n, id) {
     app.innerHTML = '<p class="loading">ENTSCHLÜSSLE …</p>';
     const seq = navSeq;
-    const [data, lectAll] = await Promise.all([getLB(n), getLect()]);
+    let [data, lectAll] = await Promise.all([getLB(n), getLect()]);
     if (seq !== navSeq) return;
+    if (!data.tasks.some(t => t.id === id)) data = { tasks: (await getTasks()).filter(t => t.lbs.includes(+n)) };   // Link auf Aufgabe außerhalb des Kursfilters
     const i = data.tasks.findIndex(t => t.id === id);
     if (i < 0) { location.hash = `#/lb/${n}`; return; }
     const t = data.tasks[i], prev = data.tasks[i - 1], next = data.tasks[i + 1];
@@ -528,6 +615,7 @@
         <aside class="side">
           <div class="box">
             <div class="lbl">Steckbrief</div>
+            ${t.kurs ? `<div class="kv"><span>Kurs</span><b>${KURS[t.kurs]}</b></div>` : ''}
             <div class="kv"><span>Jahr</span><b>${t.year}</b></div>
             ${t.part && PART[t.part] ? `<div class="kv"><span>Teil</span><b>${PART[t.part]}</b></div>` : ''}
             <div class="kv"><span>Aufgabe</span><b>${esc(t.nr)}</b></div>
@@ -535,14 +623,18 @@
             ${t.work ? `<div class="kv"><span>Text</span><b>${esc(t.work)}</b></div>` : ''}
             ${t.genre ? `<div class="kv"><span>Gattung</span><b>${esc(t.genre)}</b></div>` : ''}
             ${t.epoch ? `<div class="kv"><span>Epoche</span><b>${esc(t.epoch)}</b></div>` : ''}
+            ${t.field ? `<div class="kv"><span>Themenfeld</span><b>${esc(t.field)}</b></div>` : ''}
+            <div class="kv"><span>Format</span><b>${t.lbs.map(x => esc(LB[x].name)).join(', ')}</b></div>
             ${t.be ? `<div class="kv"><span>Punkte</span><b>${t.be} BE</b></div>` : ''}
             <div class="kv"><span>Zeit</span><b>${t.minutes} min</b></div>
           </div>
           ${timerHTML(t, n)}
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
-            <button class="btn" id="showSol">LÖSUNG ZEIGEN</button>
-            <button class="btn lectbtn" id="lectBtn" ${tl.length ? '' : 'disabled'}>📚 ${tl.length ? `MATERIAL (${tl.length})` : 'KEIN MATERIAL'}</button>
+            <button class="btn" id="showSol">ERWARTUNGSHORIZONT</button>
+            ${t.pdf ? `<a class="btn ghost" href="#/pdf/${t.pdf.a[0]}/${t.pdf.a[1]}">📄 AUFGABE ALS PDF</a>
+            <a class="btn ghost" href="#/pdf/${t.pdf.e[0]}/${t.pdf.e[1]}">📄 ERWARTUNGSHORIZONT ALS PDF</a>` : ''}
+            ${tl.length ? `<button class="btn lectbtn" id="lectBtn">📚 MATERIAL (${tl.length})</button>` : ''}
             <div class="nav2">
               ${prev ? `<a class="btn ghost" href="#/lb/${n}/${prev.id}">← ZURÜCK</a>` : '<button class="btn ghost" disabled>← ZURÜCK</button>'}
               ${next ? `<a class="btn ghost" href="#/lb/${n}/${next.id}">WEITER →</a>` : '<button class="btn ghost" disabled>WEITER →</button>'}
@@ -550,12 +642,13 @@
           </div>
         </aside>
         <div>
-          <section class="panel aufgabe"><h2>📝 AUFGABENSTELLUNG</h2><div class="content">${t.task}</div></section>
+          <section class="panel aufgabe"><h2>📝 AUFGABENSTELLUNG</h2>${t.pflicht ? '<p class="pflichtnote">📌 Dieses Werk ist Pflichtlektüre im Abitur 2027.</p>' : ''}<div class="content">${t.task}</div></section>
           <section class="panel loesung" id="sol">
-            <h2>✅ LÖSUNG</h2>
-            <div class="reveal" id="reveal"><p>Erst selbst probieren – dann aufdecken.</p><button class="btn" id="showSol2">LÖSUNG AUFDECKEN</button></div>
+            <h2>✅ ERWARTUNGSHORIZONT</h2>
+            <div class="reveal" id="reveal"><p>Erst selbst gliedern oder schreiben – dann aufdecken.</p><button class="btn" id="showSol2">ERWARTUNGSHORIZONT AUFDECKEN</button></div>
             <div id="solBody" hidden>
-              <div class="content">${t.solution}</div>
+              <p class="ewhint">Offizieller Erwartungshorizont in Stichpunkten (Orientierungsrahmen – andere schlüssige Lösungen zählen auch). Die Bewertungstabellen stehen im PDF.</p>
+              <div class="content ewb">${t.solution}</div>
               ${t.check ? `<div class="info check">${t.check}</div>` : ''}
               ${t.extra ? `<div class="info extra">${t.extra}</div>` : ''}
             </div>
@@ -565,14 +658,14 @@
     const reveal = () => {
       document.getElementById('reveal').hidden = true;
       document.getElementById('solBody').hidden = false;
-      document.getElementById('showSol').textContent = 'ZUR LÖSUNG ↓';
+      document.getElementById('showSol').textContent = 'ZUM ERWARTUNGSHORIZONT ↓';
       document.getElementById('sol').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
     bindTimer(t.id);
     loadFigs();
-    document.getElementById('lectBtn').onclick = () => {
+    if (tl.length) document.getElementById('lectBtn').onclick = () => {
       const items = tl.map(id => lectAll.find(v => v.id === id)).filter(Boolean);
       document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}${isNew(v) ? ' <em class="neu">NEU</em>' : ''}</b><small>${TAG}${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
       openModal('lect');
@@ -581,7 +674,7 @@
   }
 
   async function randomTask() {
-    const pool = (await getTasks()).map(t => [t.lbs[0], t.id]);
+    const pool = (await getTasksK()).map(t => [t.lbs[0], t.id]);
     if (!pool.length) { app.innerHTML = `<div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a><div><h1>Zufallsaufgabe</h1></div></div>${EMPTY}`; return; }
     const [n, id] = pool[Math.floor(Math.random() * pool.length)];
     location.replace(`#/lb/${n}/${id}`);
@@ -596,11 +689,13 @@
     const parts = h.split('/').filter(Boolean);
     try {
       if (!parts.length) return home();
-      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung'].includes(parts[0]);
+      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung', 'pdf'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
+      if (parts[0] === 'ueberblick') return overview();
       if (parts[0] === 'vorlesungen') return await lectPage();
       if (parts[0] === 'vorlesung' && parts[1]) return await viewer(parts[1]);
       if (parts[0] === 'lb' && LB[parts[1]]) return await (parts[2] ? taskPage(parts[1], parts[2]) : listLB(parts[1]));
+      if (parts[0] === 'pdf' && parts[1]) return await pdfPage(parts[1], parts[2]);
       if (parts[0] === 'zufall') return await randomTask();
       if (parts[0] === 'alle') return await listAll();
       location.hash = '#/';
