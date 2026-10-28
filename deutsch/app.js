@@ -21,6 +21,20 @@
     8: { name: 'Argumentieren', full: 'Materialgestütztes Schreiben argumentierender Texte', emoji: '💬', accent: 'var(--lb8)' },
   };
   const KURS = { GK: 'Grundkurs', LK: 'Leistungskurs' };
+  // Volltexte bei Projekt Gutenberg (nur gemeinfreie Werke; geprüft Oktober 2026)
+  const PG = 'https://projekt-gutenberg.org/authors/';
+  const GUTENBERG = {
+    'Irrungen, Wirrungen': PG + 'theodor-fontane/books/theodor-fontane-irrungen-wirrungen',
+    'Der zerbrochene Krug': PG + 'heinrich-von-kleist/books/heinrich-von-kleist-der-zerbrochne-krug',
+    'Woyzeck': PG + 'georg-buechner/books/buechners-woyzeck',
+    'Iphigenie auf Tauris': PG + 'johann-wolfgang-von-goethe/books/iphigenie-auf-tauris',
+    'Egmont': PG + 'johann-wolfgang-von-goethe/books/johann-wolfgang-goethe-egmont',
+    'Die Jungfrau von Orleans': PG + 'friedrich-schiller/books/die-jungfrau-von-orleans',
+    'Das Fräulein von Scuderi': PG + 'eta-hoffmann/books/das-fraeulein-von-scuderi',
+    'Das Marmorbild': PG + 'joseph-von-eichendorff/books/eichendorff-das-marmorbild',
+    'Draußen vor der Tür': PG + 'wolfgang-borchert/books/draussen-vor-der-tuer',
+  };
+  const pgLink = work => GUTENBERG[work] || null;
   const PART = { P: 'Pflichtaufgabe', W: 'Wahlaufgabe' };
 
   const app = document.getElementById('app');
@@ -552,7 +566,7 @@
     const pf = { GK: ['Robert Seethaler: Der Trafikant', 'Jenny Erpenbeck: Heimsuchung', 'Heinrich von Kleist: Der zerbrochene Krug'],
                  LK: ['Theodor Fontane: Irrungen, Wirrungen', 'Jenny Erpenbeck: Heimsuchung', 'Heinrich von Kleist: Der zerbrochene Krug', 'Georg Büchner: Woyzeck', 'Bertolt Brecht: Der gute Mensch von Sezuan'] };
     const q = s => s.split(': ')[1];
-    const lect = k => `<ul class="ovl">${pf[k].map(w => `<li><a class="ovlink" href="#/ueberblick" data-q="${esc(q(w))}">${esc(w)}</a></li>`).join('')}</ul>`;
+    const lect = k => `<ul class="ovl">${pf[k].map(w => `<li><a class="ovlink" href="#/ueberblick" data-q="${esc(q(w))}">${esc(w)}</a>${pgLink(q(w)) ? ` <a class="pglink" href="${pgLink(q(w))}" target="_blank" rel="noopener noreferrer" title="Volltext bei Projekt Gutenberg">📖 Volltext</a>` : ' <small class="pgnone">(nicht gemeinfrei)</small>'}</li>`).join('')}</ul>`;
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
         <div><h1>Abitur Deutsch 2026/27</h1><div class="meta">Überblick aus dem Unterricht · Grund- und Leistungskurs</div></div></div>
@@ -562,7 +576,7 @@
           <p class="empty">Mischformen und Kombinationen der Formate sind jederzeit möglich (z. B. Interpretation eines Romanauszugs + literarische Erörterung).</p></section>
         <section class="panel"><h2>📌 PFLICHTLEKTÜRE</h2>
           <div class="ov2"><div><h3>Grundkurs</h3>${lect('GK')}</div><div><h3>Leistungskurs</h3>${lect('LK')}</div></div>
-          <p class="empty">Klick auf ein Werk zeigt alle passenden Prüfungsaufgaben.</p></section>
+          <p class="empty">Klick auf ein Werk zeigt alle passenden Prüfungsaufgaben. „📖 Volltext“ öffnet das ganze Werk kostenlos bei Projekt Gutenberg – das gibt es nur für gemeinfreie Werke (Autor vor über 70 Jahren gestorben).</p></section>
         <section class="panel"><h2>🔭 WEITERE THEMENFELDER</h2>
           <ul class="ovl"><li>Sprache (Sprachwandel, Sprachverfall, Entwicklungstendenzen der Gegenwartssprache)</li><li>Kommunikation</li><li>Medien</li><li>Epochenwissen</li></ul></section>
         <section class="panel"><h2>✍️ SCHRIFTLICHE PRÜFUNG</h2>
@@ -634,6 +648,7 @@
           <div class="box" style="display:grid;gap:8px">
             <div class="lbl">Aktionen</div>
             <button class="btn" id="showSol">ERWARTUNGSHORIZONT</button>
+            ${pgLink(t.work) ? `<a class="btn ghost" href="${pgLink(t.work)}" target="_blank" rel="noopener noreferrer" title="Kompletter Text bei Projekt Gutenberg (öffnet neuen Tab)">📖 GANZES WERK (GUTENBERG)</a>` : ''}
             ${t.pdf ? `<a class="btn ghost" href="#/pdf/${t.pdf.a[0]}/${t.pdf.a[1]}">📄 AUFGABE ALS PDF</a>
             <a class="btn ghost" href="#/pdf/${t.pdf.e[0]}/${t.pdf.e[1]}">📄 ERWARTUNGSHORIZONT ALS PDF</a>` : ''}
             ${tl.length ? `<button class="btn lectbtn" id="lectBtn">📚 MATERIAL (${tl.length})</button>` : ''}
