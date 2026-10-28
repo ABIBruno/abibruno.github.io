@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>ABIdasmuss | Deutsch-Abiturtrainer</title>
+<meta name="description" content="Abiturprüfungen Deutsch nach Aufgabenarten – Aufgaben und Erwartungsbilder.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05070f">
+<script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../style.css?v=15">
+<style>@media (max-width:480px){.topbar-left .ptxt{display:none}}
+.gteil{margin-bottom:6px}.gteil ul ul{margin:4px 0}.gteil li{margin:3px 0}
+.gthemen{color:var(--muted);font-size:13px;margin:14px 0 4px}
+.gmatbox{margin-top:16px;border-top:1px solid var(--line);padding-top:6px}
+.gmatbox summary{cursor:pointer;font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.16em;color:var(--sky);padding:10px 0;list-style-position:outside}
+.gmat{white-space:pre-wrap;font-size:14.5px;line-height:1.6;overflow-wrap:anywhere}
+.gmat .ln{display:inline-block;width:2.4em;margin-left:-2.4em;color:var(--muted);font-size:11px;text-align:right;padding-right:.8em;box-sizing:border-box}
+.gmat{padding-left:2.4em}
+.gmat .mh{display:inline-block;color:var(--sky);margin-top:4px}
+.gmat small{color:var(--muted);font-size:12px}
+.gmat .gfig{display:block;max-width:100%;height:auto;border-radius:10px;background:#fff;margin:8px 0;white-space:normal}
+:root[data-theme="light"] .gmatbox summary,:root[data-theme="light"] .gmat .mh{color:#0270a0}
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<header class="topbar">
+  <div class="topbar-left" style="display:flex;gap:10px"><a class="pill" href="../" title="Zurück zur Fächerauswahl" aria-label="Zurück zur Fächerauswahl" style="text-decoration:none">←<span class="ptxt"> FÄCHER</span></a><button class="pill" data-open="about" aria-label="About"><span class="ico">ⓘ</span><span class="ptxt"> ABOUT</span></button></div>
+  <div class="topbar-right">
+    <button class="round" id="bgBtn" title="Farben wählen (Hintergrund &amp; Schrift)" aria-label="Farben wählen">🎨</button>
+    <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
+    <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
+    <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="footer">
+  <span>© 2026 ABIDASMUSS</span>
+  <button class="link" data-open="about">ÜBER DIE SEITE</button>
+  <button class="link" data-open="hinweis">HINWEIS</button>
+  <button class="link" data-open="datenschutz">DATENSCHUTZ</button>
+</footer>
+
+<!-- Modals -->
+<div class="modal" id="m-lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <h2 id="lockTitle">LABOR GESPERRT</h2>
+    <p>Die Deutsch-Aufgaben und -Lösungen sind verschlüsselt. Gib das Passwort ein, um alle Aufgabenarten freizuschalten.</p>
+    <form id="lockForm" autocomplete="off">
+      <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort" required>
+      <button type="submit" class="btn" id="pwBtn">ENTSPERREN</button>
+    </form>
+    <p class="err" id="pwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
+    <button class="btn ghost" data-close>ABBRECHEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-lect" role="dialog" aria-modal="true" aria-labelledby="lectTitle">
+  <div class="modal-box wide">
+    <div class="modal-icon">📚</div>
+    <h2 id="lectTitle">PASSENDES MATERIAL</h2>
+    <div id="lectList" class="lectlist"></div>
+    <button class="btn ghost" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-bg" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
+  <div class="modal-box xwide">
+    <div class="modal-icon">🎨</div>
+    <h2 id="bgTitle">FARBEN</h2>
+    <div class="bgtabs" role="tablist"><button class="bgtab on" data-mode="bg" role="tab">🖼️ Hintergrund</button><button class="bgtab" data-mode="fg" role="tab">🔤 Überschriften</button></div>
+    <p id="bgHint"></p>
+    <div id="fgPreview" class="fgprev"><span class="fgh">ÜBERSCHRIFT · AUFGABENART 2</span> <b></b></div>
+    <div id="bgGrid" class="bggrid"></div>
+    <div class="bgact"><button class="btn" id="bgReset">STANDARD</button><button class="btn ghost" data-close>FERTIG</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-about" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">🎓</div>
+    <h2>ÜBER ABIDASMUSS · DEUTSCH</h2>
+    <p>Die Aufgaben der sächsischen Abiturprüfungen im Fach Deutsch (Berufliches Gymnasium) – sortiert nach den sechs Aufgabenarten des Deutsch-Abiturs: Interpretation, Sachtextanalyse, literarische und textgebundene Erörterung sowie materialgestütztes Informieren und Argumentieren.</p>
+    <p>Zu jeder Aufgabe gibt es die Textgrundlage mit Zeilennummern und ein Erwartungsbild. Über die Suche findest du Aufgaben auch nach Autor, Werk oder Epoche.</p>
+    <p>Tipp: Erst selbst schreiben (oder wenigstens gliedern), dann das Erwartungsbild aufklappen.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-hinweis" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">⚖️</div>
+    <h2>HINWEIS</h2>
+    <p>Private Lernseite zur Abiturvorbereitung im Fach Deutsch. Die Aufgabenstellungen stammen aus den Abiturprüfungen des Freistaates Sachsen, die Textgrundlagen von ihren jeweiligen Autorinnen und Autoren; die Rechte liegen beim jeweiligen Urheber. Die Inhalte sind passwortgeschützt und nur für den persönlichen Gebrauch bestimmt. Alle Lösungen ohne Gewähr.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-datenschutz" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
+  <div class="modal-box legal">
+    <div class="modal-icon">🛡️</div>
+    <h2 id="dsTitle">DATENSCHUTZ</h2>
+    <h3>1. Verantwortlich</h3>
+    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung und kein Tracking oder Analyse-Tool.</p>
+    <h3>2. Hosting (GitHub Pages)</h3>
+    <p>Die Seite liegt bei GitHub Pages, einem Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei und Browser-Informationen, um die Seite auszuliefern und vor Angriffen zu schützen. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren Bereitstellung). Mehr dazu: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+    <h3>3. Schriftarten</h3>
+    <p>Die Schriften Orbitron und Inter liegen direkt auf dieser Seite. Es wird keine Verbindung zu Google oder anderen Schriften-Diensten aufgebaut.</p>
+    <h3>4. Passwort und Verschlüsselung</h3>
+    <p>Aufgaben, Lösungen und Materialien liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
+    <h3>5. Speicher im Browser</h3>
+    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
+    <h3>6. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
+    <p class="dsstand">Stand: Oktober 2026</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<script>window.__V = "1";</script>
+<script src="data/meta.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

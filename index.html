@@ -25,7 +25,7 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:rad
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 16px;text-align:center}
 h1{font-family:Orbitron,sans-serif;font-weight:900;font-size:clamp(2rem,7vw,3.6rem);letter-spacing:.06em;margin:0 0 10px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 p.sub{color:var(--muted);margin:0 0 44px;font-size:1.05rem}
-.choices{display:grid;grid-template-columns:repeat(2,minmax(0,260px));gap:22px;width:100%;justify-content:center}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,240px));gap:22px;width:100%;justify-content:center}
 .card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 20px;border-radius:22px;background:var(--panel);border:1px solid var(--line);color:var(--text);text-decoration:none;transition:transform .15s,border-color .15s,box-shadow .15s}
 .card:hover,.card:focus-visible{transform:translateY(-4px);outline:none}
 .card .ico{font-size:2.6rem}
@@ -35,6 +35,10 @@ p.sub{color:var(--muted);margin:0 0 44px;font-size:1.05rem}
 .vbwl .name{color:var(--cyan)}
 .geso:hover,.geso:focus-visible{border-color:var(--green);box-shadow:0 0 34px rgba(91,227,161,.25)}
 .geso .name{color:var(--green)}
+.deutsch:hover,.deutsch:focus-visible{border-color:var(--violet);box-shadow:0 0 34px rgba(181,140,255,.25)}
+.deutsch .name{color:var(--violet)}
+:root[data-theme="light"] .deutsch .name{color:#6741c4}
+@media (max-width:820px) and (min-width:561px){.choices{grid-template-columns:repeat(2,minmax(0,240px))}}
 footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 16px;letter-spacing:.05em}
 footer a{color:var(--muted)}
 .tool-link{position:absolute;top:22px;right:26px;color:var(--muted);font-size:.8rem;letter-spacing:.05em;text-decoration:underline;text-underline-offset:3px}
@@ -50,6 +54,7 @@ footer a{color:var(--muted)}
   <nav class="choices">
     <a class="card vbwl" href="vbwl.html"><span class="ico">📊</span><span class="name">VBWL</span><span class="desc">Volks- und Betriebswirtschaftslehre</span></a>
     <a class="card geso" href="geso/"><span class="ico">🩺</span><span class="name">GESO</span><span class="desc">Gesundheit und Soziales</span></a>
+    <a class="card deutsch" href="deutsch/"><span class="ico">📖</span><span class="name">DEUTSCH</span><span class="desc">Literatur, Sachtexte, Erörterung</span></a>
   </nav>
 </main>
 <footer>© 2026 ABIDASMUSS · <a href="vbwl.html">Hinweis &amp; Datenschutz siehe VBWL-Seite</a></footer>
