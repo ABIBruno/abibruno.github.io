@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>ABIdasmuss | Geschichte – Methodenwerkstatt</title>
+<meta name="description" content="Methodenwerkstatt Geschichte: Text- und Bildquellen interpretieren, Operatoren, Übungen mit Erwartungsbild.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05070f">
+<script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../style.css?v=15">
+<style>
+@media (max-width:480px){.topbar-left .ptxt{display:none}}
+:root{--amber:#ffb45a}
+:root[data-theme="light"]{--amber:#a65a00}
+.tiles.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.tiles.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.wip{margin:10px auto 0;max-width:640px;text-align:center;color:var(--muted);font-size:13px}
+/* Schema */
+.phase{margin-top:22px}
+.phase h2 .pnr{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid currentColor;margin-right:10px;font-size:13px}
+.phase.p1 h2{color:var(--cyan)}.phase.p2 h2{color:var(--violet)}.phase.p3 h2{color:var(--amber)}
+.grp h3{font-size:14px;margin:16px 0 8px;color:var(--sky)}
+.qlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.qlist label{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.02);cursor:pointer;line-height:1.5}
+.qlist input{margin-top:4px;accent-color:var(--green);flex:none;width:17px;height:17px}
+.qlist label:has(input:checked){border-color:rgba(91,227,161,.5);background:rgba(91,227,161,.07)}
+.qlist label:has(input:checked) span{color:var(--muted)}
+.qnr{color:var(--muted);font-size:12px;min-width:1.4em}
+.progress{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .25s}
+.merke{margin-top:18px;padding:12px 16px;border-radius:12px;background:rgba(255,180,90,.08);border:1px solid rgba(255,180,90,.35);line-height:1.55}
+/* Operatoren */
+.opgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media (max-width:760px){.opgrid{grid-template-columns:1fr}}
+.op{padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:var(--panel,#11151f);border-left:4px solid var(--accent)}
+.op h3{margin:0 0 4px;font-size:16px}
+.op .afb{font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:.14em;color:var(--accent)}
+.op p{margin:6px 0 0;color:var(--muted);line-height:1.5}
+.op details{margin-top:8px}.op summary{cursor:pointer;color:var(--sky);font-size:13px}
+.op ol{margin:8px 0 0;padding-left:20px;line-height:1.5}.op li{margin:3px 0}
+.afbinfo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+@media (max-width:760px){.afbinfo{grid-template-columns:1fr}}
+.afbinfo div{padding:12px 14px;border-radius:12px;border:1px solid var(--line);font-size:13.5px;line-height:1.5}
+.afbinfo b{display:block;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:.12em;margin-bottom:4px}
+/* Trainer */
+.quiz{max-width:720px;margin:20px auto 0;text-align:center}
+.quiz .qcard{padding:26px 22px;border-radius:20px;border:1px solid var(--line);background:var(--panel,#11151f)}
+.quiz .qtype{font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+.quiz .qtext{font-size:20px;margin:12px 0 18px;line-height:1.45}
+.quiz .ans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.quiz .ans{grid-template-columns:1fr}}
+.quiz .ans button{padding:14px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;cursor:pointer;text-align:center}
+.quiz .ans button:hover:not(:disabled){border-color:var(--cyan)}
+.quiz .ans button.ok{border-color:var(--green);background:rgba(91,227,161,.12)}
+.quiz .ans button.no{border-color:var(--red,#ff5d73);background:rgba(255,93,115,.12)}
+.quiz .fb{margin-top:16px;line-height:1.55;text-align:left}
+.score{font-family:Orbitron,sans-serif;letter-spacing:.12em;color:var(--muted);font-size:12px;margin-top:12px}
+/* Übung */
+.mtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.mat{counter-reset:abs;line-height:1.65}
+.mat p{margin:0 0 10px}
+.mat p.num{position:relative;padding-left:2.6em}
+.mat p.num::before{counter-increment:abs;content:counter(abs);position:absolute;left:0;top:.15em;width:2em;text-align:right;color:var(--muted);font-size:11px}
+.mat p.head{font-weight:600}
+.mtyp{font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:.14em;color:var(--amber)}
+.ghint{color:var(--muted);font-size:13px;margin:0 0 6px}
+.ewpart h3{font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:.12em;color:var(--green);margin:22px 0 10px;text-transform:uppercase}
+.ewstep{border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
+.ewstep>button{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 16px;background:transparent;border:0;color:var(--text);font:inherit;font-weight:600;cursor:pointer;text-align:left}
+.ewstep>button small{font-weight:400;color:var(--muted);white-space:nowrap}
+.ewstep .ewb{padding:0 18px 12px;line-height:1.55}
+.ewstep.open{border-color:rgba(91,227,161,.45)}
+.ewb ul{margin:4px 0 8px;padding-left:20px}.ewb li{margin:4px 0}
+.notes textarea{width:100%;min-height:140px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:12px;resize:vertical}
+.bildbox{padding:14px 16px;border-radius:12px;border:1px dashed var(--line);line-height:1.55}
+.side .kv2{font-size:13.5px;padding:6px 0;border-bottom:1px dashed var(--line);line-height:1.4}.side .kv2:last-child{border:0}
+.side .kv2 span{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.side .mini{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:4px;font-size:13px}
+.side .mini a{color:var(--sky)}
+.dlrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-top:1px dashed var(--line)}
+.dlrow:first-of-type{border-top:0}
+.dlrow small{color:var(--muted)}
+.dlrow .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media print{.topbar,.footer,#stars,.side,.noprint{display:none!important}.task-layout{display:block}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<header class="topbar">
+  <div class="topbar-left" style="display:flex;gap:10px"><a class="pill" href="../" title="Zurück zur Fächerauswahl" aria-label="Zurück zur Fächerauswahl" style="text-decoration:none">←<span class="ptxt"> FÄCHER</span></a><button class="pill" data-open="about" aria-label="About"><span class="ico">ⓘ</span><span class="ptxt"> ABOUT</span></button></div>
+  <div class="topbar-right">
+    <button class="round" id="themeBtn" title="Heller Modus" aria-label="Heller Modus">☀️</button>
+    <button class="round" id="lockBtn" title="Sperren / Entsperren" aria-label="Sperren">🔒</button>
+    <button class="round" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="footer">
+  <span>© 2026 ABIDASMUSS</span>
+  <button class="link" data-open="about">ÜBER DIE SEITE</button>
+  <button class="link" data-open="hinweis">HINWEIS</button>
+  <button class="link" data-open="datenschutz">DATENSCHUTZ</button>
+</footer>
+
+<div class="modal" id="m-lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <h2 id="lockTitle">WERKSTATT GESPERRT</h2>
+    <p>Schemata, Übungen und Erwartungsbilder sind verschlüsselt. Gib das Passwort ein, um die Methodenwerkstatt freizuschalten.</p>
+    <form id="lockForm" autocomplete="off">
+      <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort" required>
+      <button type="submit" class="btn" id="pwBtn">ENTSPERREN</button>
+    </form>
+    <p class="err" id="pwErr" hidden>Falsches Passwort – versuch's nochmal.</p>
+    <button class="btn ghost" data-close>ABBRECHEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-about" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">🏛️</div>
+    <h2>ÜBER DIE METHODENWERKSTATT</h2>
+    <p>Hier lernst du das Handwerkszeug für Geschichte: <b>Textquellen</b> und <b>Bildquellen</b> interpretieren und die <b>Operatoren</b> sicher anwenden.</p>
+    <p><b>Werkzeuge:</b> Die beiden Schemata als abhakbare Checklisten, alle Operatoren nach Anforderungsbereichen und ein Operator-Trainer zum Üben.</p>
+    <p><b>Übungen:</b> Material lesen, selbst nach Schema interpretieren, eigene Notizen machen – und dann das Erwartungsbild Schritt für Schritt aufdecken.</p>
+    <p>Die Grundlagen kommen aus dem Geschichtsunterricht. Weitere Module folgen.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-hinweis" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-icon">⚖️</div>
+    <h2>HINWEIS</h2>
+    <p>Private Lernseite zur Vorbereitung im Fach Geschichte. Arbeitsblätter, Operatorenliste und Erwartungsbilder stammen aus dem Unterricht; Quellen- und Darstellungstexte von ihren jeweiligen Autorinnen und Autoren (u. a. SPIEGEL ONLINE). Die Rechte liegen beim jeweiligen Urheber. Die Inhalte sind passwortgeschützt und nur für den persönlichen Gebrauch bestimmt. Alle Angaben ohne Gewähr.</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<div class="modal" id="m-datenschutz" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
+  <div class="modal-box legal">
+    <div class="modal-icon">🛡️</div>
+    <h2 id="dsTitle">DATENSCHUTZ</h2>
+    <h3>1. Verantwortlich</h3>
+    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung und kein Tracking oder Analyse-Tool.</p>
+    <h3>2. Hosting (GitHub Pages)</h3>
+    <p>Die Seite liegt bei GitHub Pages, einem Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei und Browser-Informationen, um die Seite auszuliefern und vor Angriffen zu schützen. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Mehr dazu: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+    <h3>3. Schriftarten</h3>
+    <p>Die Schriften Orbitron und Inter liegen direkt auf dieser Seite. Es wird keine Verbindung zu Google oder anderen Schriften-Diensten aufgebaut.</p>
+    <h3>4. Passwort und Verschlüsselung</h3>
+    <p>Alle Inhalte liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
+    <h3>5. Speicher im Browser</h3>
+    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Hell/Dunkel-Einstellung, abgehakte Schema-Punkte, deine Notizen zu Übungen und deinen Trainer-Punktestand; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
+    <h3>6. Externe Links</h3>
+    <p>Der Link zum Foto „The Falling Man“ führt zu Wikipedia (Wikimedia Foundation). Erst wenn du ihn anklickst, wird eine Verbindung dorthin aufgebaut.</p>
+    <h3>7. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
+    <p class="dsstand">Stand: November 2026</p>
+    <button class="btn" data-close>SCHLIESSEN</button>
+  </div>
+</div>
+
+<script>window.__V = "1";</script>
+<script src="data/meta.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
