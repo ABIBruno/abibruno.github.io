@@ -651,7 +651,7 @@
       if (f.size > 25 * 1048576) { fail('Datei ist größer als 25 MB.'); continue; }
       try {
         const body = await b64file(f);
-        const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-Fach': 'geso', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
+        const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': encodeURIComponent(code), 'X-Fach': 'geso', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
         const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
         if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', upSN ? 'abi-upcode-geso-sn' : 'abi-upcode-geso'); continue; }
         row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
@@ -664,7 +664,7 @@
     if (!document.body.contains(row)) return;
     if (tries > 60) { st.textContent = '⌛ Dauert länger als erwartet – das Ergebnis kommt als Meldung per E-Mail an den Seitenbetreiber.'; return; }
     try {
-      const r = await fetch(UPLOAD + '/status?name=' + encodeURIComponent(name), { headers: { 'X-Upload-Code': code, 'X-Fach': 'geso' } });
+      const r = await fetch(UPLOAD + '/status?name=' + encodeURIComponent(name), { headers: { 'X-Upload-Code': encodeURIComponent(code), 'X-Fach': 'geso' } });
       const j = await r.json();
       if (j.ok && !j.pending) {
         const x = j.result; row.classList.remove('wait');
