@@ -573,7 +573,7 @@
   /* ---------- Upload (Lehrkräfte) ---------- */
   const UPLOAD = window.__UPLOAD || '';
   function uploadPage() {
-    const code = store.get('localStorage', 'abi-upcode') || '';
+    const code = store.get('localStorage', 'abi-upcode-geso') || '';
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
         <div><h1>Vorlesung hochladen · Geso</h1><div class="meta">Für Lehrkräfte · PDFs für Gesundheit und Soziales werden automatisch eingeordnet, verschlüsselt und veröffentlicht</div></div></div>
@@ -619,7 +619,7 @@
     const list = document.getElementById('uplist');
     if (!UPLOAD) { alertRow(list, 'Upload-Dienst noch nicht eingerichtet.'); return; }
     if (!code) { alertRow(list, 'Bitte zuerst den Upload-Code eingeben.'); document.getElementById('upcode').focus(); return; }
-    store.set('localStorage', 'abi-upcode', code);
+    store.set('localStorage', 'abi-upcode-geso', code);
     for (const f of files) {
       const row = document.createElement('div'); row.className = 'uprow';
       row.innerHTML = `<span class="upico">📄</span><div><b>${esc(f.name)}</b><small class="upst">Wird hochgeladen …</small></div>`;
@@ -632,7 +632,7 @@
         const body = await b64file(f);
         const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-Fach': 'geso', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
         const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
-        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode'); continue; }
+        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode-geso'); continue; }
         row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
         poll(j.name, code, row, st);
       } catch (e) { fail('Keine Verbindung zum Upload-Dienst (für Geso evtl. noch nicht freigeschaltet).'); }
