@@ -542,3 +542,14 @@ html[data-theme="light"] .badge.sn,html[data-theme="light"] em.sn{color:#fff}
 .chatinfo{color:var(--muted)}
 .chatdraft{display:grid;gap:2px}
 .chatnote{font-size:13px;text-align:center}
+.thread{display:flex;flex-direction:column;gap:6px}
+.threadbar{display:flex;gap:16px;padding-left:14px}
+.thread > .chatmsg.mine + .threadbar{align-self:flex-end;padding:0 14px 0 0}
+.replies{display:flex;flex-direction:column;gap:8px;margin-left:26px;padding-left:12px;border-left:2px solid color-mix(in srgb,var(--violet) 35%,transparent)}
+.chatmsg.reply{max-width:90%;font-size:14px}
+.chatmsg.gone{color:var(--muted);font-style:italic;font-size:14px}
+.chatactions{margin-top:4px;text-align:right}
+.linkbtn.danger{color:var(--red)}
+.delask{font-size:12px;color:var(--muted)}
+.replybox{margin-left:26px;display:grid;gap:8px}
+.replybox textarea{width:100%;box-sizing:border-box;background:var(--panel-2);color:var(--text);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);border-radius:12px;padding:10px 12px;font:inherit;resize:vertical}
