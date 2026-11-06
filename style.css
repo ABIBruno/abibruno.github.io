@@ -510,3 +510,12 @@ html.customfg :is(.subtitle,.sechead h2,.sechead h2 span,.sechead h2 b,.tile .t,
   #printArea table.bab.kalk td.lbl{width:auto}
   #printArea .note,#printArea h3.sub{break-after:avoid;page-break-after:avoid}
 }
+
+/* Schülernotizen */
+.badge.sn,em.sn{color:#1e1600;background:var(--gold);border-color:var(--gold);font-weight:700}
+em.sn{font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.12em;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:middle;font-style:normal}
+html[data-theme="light"] .badge.sn,html[data-theme="light"] em.sn{color:#fff}
+.snhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:22px 0 12px;padding-top:14px;border-top:1px dashed color-mix(in srgb,var(--gold) 45%,transparent);font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:.14em;color:var(--gold)}
+.snhead .cnt{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid color-mix(in srgb,var(--gold) 50%,transparent)}
+.snhead small{flex-basis:100%;font-family:Inter,sans-serif;letter-spacing:0;font-size:12px;color:var(--muted)}
+.info.snhint{margin:0 0 14px;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent);font-size:14px;line-height:1.5}

@@ -289,6 +289,14 @@
 
   const mb = n => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
   const isNew = v => v.added && (Date.now() - new Date(v.added).getTime()) < 21 * 864e5;
+
+  /* ---------- Schülernotizen (von Schülern geteilt, Tag 'schueler') ---------- */
+  const isSN = v => v && v.tag === 'schueler';
+  function lectSplit(list, cls) {
+    const lv = list.filter(v => !isSN(v)), sn = list.filter(isSN);
+    return (lv.length || !sn.length ? `<div class="${cls}">${lv.map(v => lectCardHTML(v)).join('')}</div>` : '') +
+      (sn.length ? `<div class="snhead"><span>📝 SCHÜLERNOTIZEN</span><span class="cnt">${sn.length}</span><small>Von Schülern geteilt · nicht von Lehrkräften geprüft</small></div><div class="${cls}">${sn.map(v => lectCardHTML(v)).join('')}</div>` : '');
+  }
   function lectCardHTML(v, kind = 'v') {
     const acc = LB[v.lb]?.accent || 'var(--cyan)';
     const href = `#/vorlesung/${v.id}`;
@@ -299,6 +307,7 @@
         ${v.topic ? `<span class="badge part">${esc(v.topic)}</span>` : ''}
         <span class="badge">${v.pages} S.</span>
         ${isNew(v) ? '<span class="badge neu">NEU</span>' : ''}
+        ${isSN(v) ? '<span class="badge sn">📝 SCHÜLERNOTIZ</span>' : ''}
       </div>
       <h3><span class="docico">📄</span>${twoTone(v.title)}</h3>
       <p>${n ? `Passt zu ${n} Prüfungsaufgabe${n > 1 ? 'n' : ''}` : 'Grundlagen'} · ${mb(v.size)}</p>
@@ -422,6 +431,7 @@
         <a class="tile" href="#/zufall"><span class="emoji">🎲</span><span class="t">Zufalls&shy;aufgabe</span><span class="s">Überrasch mich</span></a>
         <a class="tile" href="#/alle"><span class="emoji">🚀</span><span class="t">Alle Aufgaben</span><span class="s">${total()} Aufgaben</span></a>
         <a class="tile" style="--accent:var(--green)" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
+        <a class="tile" style="--accent:var(--gold)" href="#/teilen"><span class="emoji">📝</span><span class="t">Notizen teilen</span><span class="s">Für Schüler</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -469,7 +479,7 @@
       ${kursBar()}
       ${mine.length ? '' : '<!--'}<details class="lectbox" style="--accent:${l.accent}" ${open ? 'open' : ''}>
         <summary><span>📚 MATERIAL ZU ${TAG}${n}</span><span class="cnt">${mine.length}</span></summary>
-        ${mine.length ? `${topicChips(mine, topic)}<div class="cards small">${shown.map(v => lectCardHTML(v)).join('')}</div>`
+        ${mine.length ? `${topicChips(mine, topic)}${lectSplit(shown, 'cards small')}`
           : ''}
       </details>${mine.length ? '' : '-->'}
       <div class="sechead"><h2>AUFGABEN</h2></div>
@@ -492,7 +502,7 @@
         <div><h1>Material</h1><div class="meta">${lect.length} Unterrichtsmaterialien · nach Aufgabenart und Thema filtern</div></div></div>
       ${lect.length ? `<div class="chips">${['alle', ...lbs].map(o => `<button class="chip${String(o) === String(lbSel) ? ' on' : ''}" data-lb="${o}">${o === 'alle' ? 'ALLE' : TAG + o + ' · ' + esc(plain(LB[o].name).toUpperCase())}</button>`).join('')}</div>
       ${lbSel === 'alle' ? '' : topicChips(inLb, topic)}
-      <div class="cards">${shown.map(v => lectCardHTML(v)).join('')}</div>`
+      ${lectSplit(shown, 'cards')}`
       : '<p class="empty" style="margin:18px 0">Noch kein Unterrichtsmaterial – Lehrkräfte können PDFs über „Hochladen“ einreichen. Sie werden automatisch einem Aufgabenformat, einem Thema und passenden Prüfungsaufgaben zugeordnet.</p>'}`;
     app.querySelectorAll('.chip[data-lb]').forEach(c => c.addEventListener('click', () => lectPage(c.dataset.lb, 'alle')));
     app.querySelectorAll('.chip[data-topic]').forEach(c => c.addEventListener('click', () => lectPage(lbSel, c.dataset.topic)));
@@ -683,8 +693,8 @@
     bindTimer(t.id);
     loadFigs();
     if (tl.length) document.getElementById('lectBtn').onclick = () => {
-      const items = tl.map(id => lectAll.find(v => v.id === id)).filter(Boolean);
-      document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>📄</span><span><b>${esc(v.title)}${isNew(v) ? ' <em class="neu">NEU</em>' : ''}</b><small>${TAG}${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
+      const items = tl.map(id => lectAll.find(v => v.id === id)).filter(Boolean).sort((a, b) => isSN(a) - isSN(b));
+      document.getElementById('lectList').innerHTML = items.map(v => `<a class="lectitem" href="#/vorlesung/${v.id}" data-close><span>${isSN(v) ? '📝' : '📄'}</span><span><b>${esc(v.title)}${isNew(v) ? ' <em class="neu">NEU</em>' : ''}${isSN(v) ? ' <em class="sn">SCHÜLERNOTIZ</em>' : ''}</b><small>${TAG}${v.lb} · ${esc(v.topic)} · ${v.pages} Seiten</small></span><span class="go">→</span></a>`).join('');
       openModal('lect');
     };
     window.scrollTo(0, 0);
@@ -692,8 +702,10 @@
 
   /* ---------- Upload (Lehrkräfte) ---------- */
   const UPLOAD = window.__UPLOAD || '';
-  function uploadPage() {
-    const code = store.get('localStorage', 'abi-upcode') || '';
+  let upSN = false;
+  function uploadPage(sn = false) {
+    upSN = sn;
+    const code = store.get('localStorage', upSN ? 'abi-upcode-sn' : 'abi-upcode') || '';
     app.innerHTML = `
       <div class="pagehead"><a class="back" href="#/" aria-label="Zurück">←</a>
         <div><h1>Material hochladen · Deutsch</h1><div class="meta">Für Lehrkräfte · PDFs (Theorie, Arbeitsblätter, Lösungen) werden automatisch eingeordnet, verschlüsselt und veröffentlicht</div></div></div>
@@ -724,6 +736,15 @@
           <p class="empty">Tipp: Aussagekräftige Dateinamen (z. B. „Charakterisierung Dorfrichter Adam.pdf“) werden als Titel verwendet.</p>
         </aside>
       </div>`;
+    if (sn) {
+      app.querySelector('.pagehead h1').textContent = 'Notizen teilen';
+      app.querySelector('.pagehead .meta').innerHTML = 'Für Schüler · deine Zusammenfassungen werden automatisch eingeordnet und erscheinen als <b>Schülernotiz</b>';
+      const ci = document.getElementById('upcode');
+      ci.placeholder = 'Schüler-Passwort';
+      ci.closest('.fld').querySelector('span').textContent = 'Schüler-Passwort';
+      const li = app.querySelector('.uphelp ol li'); if (li) li.textContent = 'Schüler-Passwort eingeben (wird im Browser gemerkt).';
+      app.querySelector('.uphelp h2').insertAdjacentHTML('afterend', `<div class="info snhint"><b>📝 Gemeinsam lernen</b><br>Teile deine Zusammenfassungen, Mitschriften oder Lernzettel als PDF. Sie stehen danach bei den Vorlesungen unter <b>Schülernotizen</b> und direkt bei den passenden Aufgaben.<br><br>Bitte nur <b>eigene</b> Inhalte – keine Namen oder Fotos von anderen, keine fremden Lösungen aus dem Netz. Unpassende Dateien werden wieder entfernt.</div>`);
+    }
     const input = document.getElementById('upfile'), drop = document.getElementById('drop');
     input.onchange = () => { handle([...input.files]); input.value = ''; };
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -739,7 +760,7 @@
     const list = document.getElementById('uplist');
     if (!UPLOAD) { alertRow(list, 'Upload-Dienst noch nicht eingerichtet.'); return; }
     if (!code) { alertRow(list, 'Bitte zuerst den Upload-Code eingeben.'); document.getElementById('upcode').focus(); return; }
-    store.set('localStorage', 'abi-upcode', code);
+    store.set('localStorage', upSN ? 'abi-upcode-sn' : 'abi-upcode', code);
     for (const f of files) {
       const row = document.createElement('div'); row.className = 'uprow';
       row.innerHTML = `<span class="upico">📄</span><div><b>${esc(f.name)}</b><small class="upst">Wird hochgeladen …</small></div>`;
@@ -752,7 +773,7 @@
         const body = await b64file(f);
         const r = await fetch(UPLOAD + '/upload', { method: 'POST', headers: { 'X-Upload-Code': code, 'X-Fach': 'deutsch', 'X-LB': lb, 'X-File-Name': encodeURIComponent(f.name), 'Content-Type': 'text/plain' }, body });
         const j = await r.json().catch(() => ({ ok: false, error: 'Antwort unlesbar (' + r.status + ')' }));
-        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', 'abi-upcode'); continue; }
+        if (!j.ok) { fail(j.error || 'Fehler beim Hochladen'); if (r.status === 401) store.del('localStorage', upSN ? 'abi-upcode-sn' : 'abi-upcode'); continue; }
         row.classList.add('wait'); st.textContent = '⏳ Hochgeladen – wird eingeordnet (ca. 1–2 Minuten) …';
         poll(j.name, code, row, st);
       } catch (e) { fail('Keine Verbindung zum Upload-Dienst (für Deutsch evtl. noch nicht freigeschaltet).'); }
@@ -797,6 +818,7 @@
       const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung', 'pdf'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
       if (parts[0] === 'upload') return uploadPage();
+      if (parts[0] === 'teilen') return uploadPage(true);
       if (parts[0] === 'ueberblick') return overview();
       if (parts[0] === 'vorlesungen') return await lectPage();
       if (parts[0] === 'vorlesung' && parts[1]) return await viewer(parts[1]);
