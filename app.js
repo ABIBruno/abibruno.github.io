@@ -415,6 +415,7 @@
         <a class="tile" style="--accent:var(--pink)" href="#/privat"><span class="lockbadge">${pkey ? '🔓' : '🔐'}</span><span class="emoji">🗝️</span><span class="t">Privat</span><span class="s">Extra-Passwort</span></a>
         <a class="tile" style="--accent:var(--green)" href="#/upload"><span class="emoji">⬆️</span><span class="t">Hochladen</span><span class="s">Für Lehrkräfte</span></a>
         <a class="tile" style="--accent:var(--gold)" href="#/teilen"><span class="emoji">📝</span><span class="t">Notizen teilen</span><span class="s">Für Schüler</span></a>
+        <a class="tile" style="--accent:var(--violet)" href="#/chat">${key ? '' : '<span class="lockbadge">🔒</span>'}<span class="emoji">💬</span><span class="t">Gruppenchat</span><span class="s">Fragen zu Aufgaben</span></a>
         <button class="tile" data-open="about"><span class="emoji">💡</span><span class="t">So geht's</span><span class="s">Kurze Anleitung</span></button>
       </div>`;
     const q = document.getElementById('q');
@@ -616,6 +617,7 @@
     document.getElementById('showSol').onclick = reveal;
     document.getElementById('showSol2').onclick = reveal;
     bindTimer(t.id);
+    if (window.AbiChat && AbiChat.enabled) AbiChat.mark(t, n);
     addPrintButtons(t, n);
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
@@ -805,12 +807,13 @@
     try {
       if (!parts.length) return home();
       if (parts[0] === 'upload') return uploadPage();
+      if (parts[0] === 'chat' && window.AbiChat && AbiChat.enabled && key) return await AbiChat.page();
       if (parts[0] === 'teilen') return uploadPage(true);
       if (parts[0] === 'privat') {
         if (!pkey) { home(); return requirePriv(render); }
         return await (parts[1] ? viewer('p', parts[1]) : privPage());
       }
-      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung'].includes(parts[0]);
+      const needsKey = ['lb', 'zufall', 'alle', 'vorlesungen', 'vorlesung', 'chat'].includes(parts[0]);
       if (needsKey && !key) { home(); return requireUnlock(render); }
       if (parts[0] === 'vorlesungen') return await lectPage();
       if (parts[0] === 'vorlesung' && parts[1]) return await viewer('v', parts[1]);
