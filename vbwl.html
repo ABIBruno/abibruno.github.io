@@ -12,7 +12,7 @@
 <script>try{var d=document.documentElement;if(localStorage.getItem('abi-theme')==='light')d.dataset.theme='light';var b=localStorage.getItem('abi-bg');if(/^#[0-9a-f]{6}$/i.test(b||'')){d.style.setProperty('--userbg',b);d.classList.add('custombg')}var f=localStorage.getItem('abi-fg');if(/^#[0-9a-f]{6}$/i.test(f||'')){d.style.setProperty('--userfg',f);d.classList.add('customfg')}}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 <style>@media (max-width:480px){.topbar-left .ptxt{display:none}}</style>
 </head>
 <body>
@@ -35,6 +35,7 @@
   <button class="link" data-open="about">ÜBER DIE SEITE</button>
   <button class="link" data-open="hinweis">HINWEIS</button>
   <button class="link" data-open="datenschutz">DATENSCHUTZ</button>
+  <a class="link" href="impressum.html">IMPRESSUM</a>
 </footer>
 
 <!-- Modals -->
@@ -112,21 +113,50 @@
   <div class="modal-box legal">
     <div class="modal-icon">🛡️</div>
     <h2 id="dsTitle">DATENSCHUTZ</h2>
-    <h3>1. Verantwortlich</h3>
-    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung und kein Tracking oder Analyse-Tool.</p>
-    <h3>2. Hosting (GitHub Pages)</h3>
-    <p>Die Seite liegt bei GitHub Pages, einem Dienst der GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei und Browser-Informationen, um die Seite auszuliefern und vor Angriffen zu schützen. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren Bereitstellung). Mehr dazu: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
-    <h3>3. Schriftarten</h3>
-    <p>Die Schriften Orbitron und Inter liegen direkt auf dieser Seite. Es wird keine Verbindung zu Google oder anderen Schriften-Diensten aufgebaut.</p>
-    <h3>4. Passwort und Verschlüsselung</h3>
-    <p>Aufgaben, Lösungen und Vorlesungen liegen verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei nicht übertragen und nirgends gespeichert.</p>
-    <h3>5. Speicher im Browser</h3>
-    <p>Die Seite speichert nur in deinem Browser, nichts davon wird an mich übertragen: im <i>localStorage</i> deine Farb- und Hell/Dunkel-Einstellung sowie bei Lehrkräften den eingegebenen Upload-Code; im <i>sessionStorage</i> den aus dem Passwort abgeleiteten Schlüssel, bis du den Tab schließt oder auf 🔓 klickst. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit über die Browser-Einstellungen löschen.</p>
-    <h3>6. Hochladen (für Lehrkräfte)</h3>
-    <p>Beim Hochladen gehen die PDF-Datei, ihr Dateiname, der Upload-Code und deine IP-Adresse an einen Cloudflare Worker der Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (zertifiziert unter dem EU-US Data Privacy Framework). Von dort wird die Datei in ein privates GitHub-Repository übertragen, automatisch eingeordnet, verschlüsselt und auf dieser Seite veröffentlicht. Die unverschlüsselte Originaldatei wird danach gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; die verschlüsselte Vorlesung bleibt online, bis du ihre Löschung verlangst.</p>
-    <h3>7. Deine Rechte</h3>
-    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Schreib mir dafür einfach eine E-Mail. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
-    <p class="dsstand">Stand: Oktober 2026</p>
+    <p>Diese Datenschutzerklärung informiert dich nach Art. 13 DSGVO darüber, welche personenbezogenen Daten beim Besuch und bei der Nutzung von ABIdasmuss (abibruno.github.io) verarbeitet werden, wozu und auf welcher Rechtsgrundlage. Sie gilt für alle Bereiche der Seite (Startseite, VBWL, Geso, Deutsch, Geschichte und PDF-Konverter).</p>
+    <h3>1. Verantwortlicher</h3>
+    <p>Bruno Kmoch · E-Mail: <a href="mailto:brunokmoch08@gmail.com">brunokmoch08@gmail.com</a><br>Weitere Angaben findest du im <a href="impressum.html">Impressum</a>. Ein Datenschutzbeauftragter ist nicht benannt, da dafür keine gesetzliche Pflicht besteht (Art. 37 DSGVO, § 38 BDSG).</p>
+    <h3>2. Das Wichtigste in Kürze</h3>
+    <p>ABIdasmuss ist eine private, nicht-kommerzielle Lernseite zur Abiturvorbereitung. Es gibt keine Nutzerkonten, keine Cookies, keine Werbung, kein Tracking und keine Analyse- oder Statistik-Tools. Es werden keine Inhalte von Drittanbietern (z. B. Google Fonts, YouTube, Social-Media-Plugins oder CDNs) eingebunden. Personenbezogene Daten entstehen nur beim Aufruf der Seite (Hosting), wenn du freiwillig Dateien hochlädst oder wenn du den Gruppenchat nutzt.</p>
+    <h3>3. Hosting und Aufruf der Seite (GitHub Pages)</h3>
+    <p>Die Seite wird über GitHub Pages bereitgestellt, einen Dienst der GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Bei jedem Aufruf verarbeitet GitHub technisch notwendige Daten: deine IP-Adresse, Datum und Uhrzeit, die aufgerufene Datei, die übertragene Datenmenge sowie Browser- und Betriebssystem-Informationen. Das ist nötig, um dir die Seite auszuliefern und sie vor Missbrauch und Angriffen zu schützen. Ich selbst habe auf diese Protokolle keinen Zugriff und werte sie nicht aus. GitHub speichert sie nach eigenen Angaben nur für begrenzte Zeit zu Sicherheitszwecken.<br>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und funktionierenden Bereitstellung der Seite). Die Übermittlung in die USA stützt sich auf den Angemessenheitsbeschluss der EU-Kommission zum EU-US Data Privacy Framework (Art. 45 DSGVO), unter dem GitHub zertifiziert ist. Mehr: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+    <h3>4. Schriftarten und externe Inhalte</h3>
+    <p>Die Schriften Orbitron und Inter sowie alle Programmbibliotheken (z. B. für den PDF-Konverter) liegen direkt auf dieser Seite. Beim Laden wird keine Verbindung zu Google oder anderen Drittanbietern aufgebaut. Eine Sicherheitsrichtlinie (Content-Security-Policy) sorgt technisch dafür, dass die Seite nur mit den in dieser Erklärung genannten Diensten Verbindung aufnehmen kann. Beim Klick auf externe Links wird kein Referrer übertragen.</p>
+    <h3>5. Passwortschutz und Verschlüsselung</h3>
+    <p>Aufgaben, Lösungen und Vorlesungen liegen nur verschlüsselt auf dem Server und werden erst in deinem Browser entschlüsselt. Dein Passwort wird dabei weder an mich noch an einen anderen Dienst übertragen und nirgends gespeichert.</p>
+    <h3>6. Speicher im Browser (localStorage / sessionStorage)</h3>
+    <p>Für einzelne Funktionen speichert die Seite Daten ausschließlich lokal in deinem Browser. Nichts davon wird automatisch an mich übertragen:</p>
+    <ul>
+      <li><b>Darstellung:</b> Farb- und Hell/Dunkel-Einstellung.</li>
+      <li><b>Entsperren:</b> der aus dem Passwort abgeleitete Schlüssel (nur im sessionStorage, bis du den Tab schließt oder auf 🔓 klickst).</li>
+      <li><b>Hochladen:</b> der eingegebene Upload-Code, damit du ihn nicht jedes Mal neu eintippen musst.</li>
+      <li><b>Deutsch / Geschichte:</b> gewählter Kurs (GK/LK) sowie deine eigenen Notizen, Häkchen und Punktestände in der Methodenwerkstatt.</li>
+      <li><b>Gruppenchat:</b> dein selbst gewählter Anzeigename, eine zufällige Geräte-Kennung (damit deine eigenen Nachrichten markiert werden) und geheime Lösch-Schlüssel für deine eigenen Nachrichten.</li>
+    </ul>
+    <p>Das Speichern und Auslesen ist für die von dir ausdrücklich gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG); eine Einwilligung ist dafür nicht nötig. Du kannst diese Daten jederzeit über die Einstellungen deines Browsers („Websitedaten löschen“) entfernen. Dann gehen allerdings z. B. deine Notizen und die Möglichkeit verloren, eigene Chat-Nachrichten zu löschen.</p>
+    <h3>7. PDF-Konverter</h3>
+    <p>Der Konverter (PDF → Word/PowerPoint) arbeitet vollständig in deinem Browser. Die ausgewählte Datei wird nicht hochgeladen und verlässt dein Gerät nicht.</p>
+    <h3>8. Hochladen von Vorlesungen (Lehrkräfte) und Schülernotizen</h3>
+    <p>Lehrkräfte können Vorlesungen, Schülerinnen und Schüler eigene Zusammenfassungen („Schülernotizen“) hochladen. Das ist freiwillig und nur mit dem jeweiligen Upload-Code möglich. Dabei werden die PDF-Datei mit ihrem Inhalt, der Dateiname, das gewählte Fach und der Lernbereich, der Upload-Code sowie deine IP-Adresse an einen Cloudflare Worker der Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA, übertragen. Die IP-Adresse wird dort nur kurzzeitig verwendet, um massenhaftes Durchprobieren des Upload-Codes zu bremsen (Rate-Limit); ich speichere sie nicht.<br>Von dort wird die Datei in ein privates GitHub-Repository übertragen, automatisch dem passenden Thema zugeordnet, verschlüsselt und auf dieser Seite veröffentlicht (Schülernotizen mit dem Tag „Schülernotizen“). Die unverschlüsselte Originaldatei wird danach gelöscht. Veröffentlichte Dateien können alle lesen, die das Passwort des jeweiligen Fachs kennen.<br><b>Bitte lade nur eigene Inhalte hoch und keine personenbezogenen Daten anderer</b> (z. B. Namen, Fotos oder Kontaktdaten von Mitschülern oder Lehrkräften).<br>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem gemeinsamen Lernangebot und an einem missbrauchssicheren Upload). Cloudflare und GitHub sind unter dem EU-US Data Privacy Framework zertifiziert (Art. 45 DSGVO). Hochgeladene Dateien bleiben online, solange die Seite betrieben wird oder bis du ihre Löschung verlangst. Eine kurze E-Mail genügt.</p>
+    <h3>9. Gruppenchat (VBWL und Geso)</h3>
+    <p>Im Gruppenchat kannst du freiwillig Fragen zu Aufgaben stellen und beantworten. Die Nachrichten werden bei Supabase gespeichert (Vertragspartner: Supabase Pte. Ltd., Singapur; Serverstandort: Frankfurt am Main, Deutschland). Mit Supabase besteht ein Auftragsverarbeitungsvertrag (Art. 28 DSGVO). Für mögliche Zugriffe von außerhalb der EU gelten die EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO).</p>
+    <p>Bevor eine Nachricht dein Gerät verlässt, wird sie in deinem Browser mit AES-256-GCM verschlüsselt. Der Schlüssel wird aus dem Passwort des Fachs abgeleitet. Gespeichert werden nur: das Fach, die verschlüsselte Nachricht (darin Anzeigename, Text, Bezug zur Aufgabe und ggf. zur beantworteten Nachricht), ein technischer Zufallswert (IV), der Zeitpunkt sowie ein nicht umkehrbarer Hash deines Lösch-Schlüssels. Supabase kann die Inhalte nicht lesen. Lesen können sie alle, die das Passwort des jeweiligen Fachs kennen, also alle Teilnehmenden des Kurses einschließlich mir als Betreiber. Die Seite speichert keine IP-Adressen in der Datenbank. Supabase verarbeitet beim Abruf technisch bedingt deine IP-Adresse in kurzlebigen Server-Protokollen.</p>
+    <p><b>Bitte nutze nur einen Spitznamen und gib keine Nachnamen, Telefonnummern, Adressen oder sonstigen persönlichen Daten von dir oder anderen an.</b></p>
+    <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an gegenseitiger Lernunterstützung). Die Nutzung ist freiwillig. Deine eigenen Nachrichten kannst du jederzeit selbst löschen (solange die Lösch-Schlüssel in deinem Browser vorhanden sind), ansonsten lösche ich sie auf Anfrage per E-Mail. Unabhängig davon lösche ich den gesamten Chatverlauf spätestens zum Ende des Schuljahres (31. Juli). Missbräuchliche Nachrichten kann ich jederzeit entfernen.</p>
+    <h3>10. Empfänger im Überblick</h3>
+    <p>Daten erhalten nur die oben genannten Dienstleister, also GitHub (Hosting, Ablage der Uploads), Cloudflare (Upload-Weiterleitung) und Supabase (Chat-Speicherung), jeweils nur, soweit es für die genannte Funktion nötig ist. Eine Weitergabe an sonstige Dritte, ein Verkauf oder eine Nutzung für Werbung findet nicht statt.</p>
+    <h3>11. Keine Pflicht, keine automatisierten Entscheidungen</h3>
+    <p>Du bist nicht verpflichtet, Daten bereitzustellen. Ohne den technisch nötigen Seitenaufruf kann die Seite aber nicht angezeigt werden. Uploads und Chat sind vollständig freiwillig. Es findet keine automatisierte Entscheidungsfindung und kein Profiling statt (Art. 22 DSGVO).</p>
+    <h3>12. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18) und Datenübertragbarkeit (Art. 20 DSGVO). Schreib mir dafür einfach eine E-Mail.</p>
+    <p><b>Widerspruchsrecht (Art. 21 DSGVO):</b> Soweit Daten auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO verarbeitet werden, kannst du aus Gründen, die sich aus deiner besonderen Situation ergeben, jederzeit widersprechen. Eine formlose E-Mail genügt.</p>
+    <p>Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), z. B. bei der Sächsischen Datenschutz- und Transparenzbeauftragten, Devrientstraße 5, 01067 Dresden.</p>
+    <h3>13. Sicherheit</h3>
+    <p>Die Seite wird ausschließlich verschlüsselt über HTTPS ausgeliefert. Inhalte und Chat-Nachrichten sind zusätzlich Ende-zu-Ende verschlüsselt, und Uploads sind durch Zugangscode und Rate-Limit geschützt. Eine absolute Sicherheit kann bei der Übertragung über das Internet aber niemand garantieren.</p>
+    <h3>14. Änderungen</h3>
+    <p>Ich passe diese Erklärung an, wenn neue Funktionen dazukommen oder sich die Rechtslage ändert. Es gilt die jeweils hier veröffentlichte Fassung.</p>
+    <p class="dsstand">Stand: November 2026</p>
+    <p class="dsstand"><a href="datenschutz.html">Als eigene Seite öffnen</a> · <a href="impressum.html">Impressum</a></p>
     <button class="btn" data-close>SCHLIESSEN</button>
   </div>
 </div>
@@ -134,7 +164,7 @@
 <script>window.__V = "14"; window.__UPLOAD = "https://abidasmuss-upload.brunokmoch08.workers.dev";</script>
 <script src="data/meta.js?v=14"></script>
 <script>window.__CHAT = { fach: "vbwl", keyName: "abi-key" };</script>
-<script src="chat.js?v=2"></script>
+<script src="chat.js?v=3"></script>
 <script src="app.js?v=17"></script>
 </body>
 </html>

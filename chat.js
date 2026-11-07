@@ -166,7 +166,7 @@ window.AbiChat = (() => {
           <textarea id="chatmsg" maxlength="${MAX_TEXT}" rows="3" placeholder="Neue Frage: Wo hängst du? Was hast du schon versucht?"></textarea>
           <div class="chatrow"><small class="chatinfo" id="chatinfo">Strg + Enter zum Senden · Nachrichten bleiben 90 Tage sichtbar</small><button class="btn" id="chatsend">SENDEN</button></div>
         </form>
-        <p class="empty chatnote">Bitte keine echten Nachnamen, Telefonnummern oder Fotos von anderen. Lösungen erklären statt nur abschreiben lassen 🙂</p>
+        <p class="empty chatnote">Bitte keine echten Nachnamen, Telefonnummern oder Fotos von anderen. Lösungen erklären statt nur abschreiben lassen 🙂 · <button type="button" class="dslink" data-open="datenschutz">Datenschutz</button></p>
       </div>`;
     const log = document.getElementById('chatlog'), info = document.getElementById('chatinfo');
     const draftBox = document.getElementById('chatdraft'), filterBox = document.getElementById('chatfilter');

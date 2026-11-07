@@ -471,6 +471,7 @@ html.customfg :is(.subtitle,.sechead h2,.sechead h2 span,.sechead h2 b,.tile .t,
 .modal-box.legal p{font-size:14px;line-height:1.55}
 .modal-box.legal a{color:var(--cyan)}
 .modal-box.legal .dsstand{color:var(--muted);font-size:12px}
+.modal-box.legal ul{margin:0;padding-left:20px;font-size:14px;line-height:1.55;text-align:left}
 .uphelp .dslink{background:none;border:0;padding:0;color:var(--cyan);font:inherit;text-decoration:underline;cursor:pointer}
 
 /* ---------- Arbeitsblatt / Lösung drucken ---------- */
