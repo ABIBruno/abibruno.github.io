@@ -178,23 +178,47 @@
   }
   const numHit = (v, u) => u.nums.some(x => Math.abs(x - v) <= Math.max(0.011, Math.abs(v) * 0.005)) ? 1 : 0;
 
+  // Reine Stichwortliste? (kurze Abschnitte zwischen Kommas/Zeilen, kaum ganze Sätze)
+  function isList(text) {
+    const segs = String(text).split(/[,;\n.•·–-]+/).map(s => s.trim()).filter(Boolean);
+    if (segs.length < 4) return false;
+    const avg = segs.reduce((a, s) => a + s.split(/\s+/).length, 0) / segs.length;
+    return avg < 3.2;
+  }
+
   function scoreKeywords(points, u) {
+    const list = isList(u.raw);
     for (const p of points) {
-      let got = 0, total = 0;
+      let got = 0, total = 0, nNum = 0, nHit = 0;
       for (const t of p.terms) {
         const w = t.type === 'n' ? 1.5 : 1;
         t.hit = t.type === 'n' ? numHit(t.v, u) : wordHit(t.key, u);
+        if (t.type === 'n') { nNum++; nHit += t.hit; }
         got += t.hit * w; total += w;
       }
       p.kw = total ? got / total : 0;
+      // Rechenpunkt mit (überwiegend) falschen Zahlen: höchstens „teilweise“
+      p.cap = list || (nNum >= 2 && nHit / nNum < 0.5) ? 1 : 2;
     }
+    return list;
   }
 
+  /* Ampel je Punkt – Schwellen aus dem Qualitätstest (qa/testset.json):
+     nur Stichworte: 0.50 / 0.25 · mit KI: Stichworte 0.60 / 0.30, Bedeutung 0.72 / 0.60 */
   const levelOf = p => {
-    let lvl = p.kw >= 0.6 ? 2 : p.kw >= 0.3 ? 1 : 0;
-    if (p.sem != null) lvl = Math.max(lvl, p.sem >= 0.7 ? 2 : p.sem >= 0.56 ? 1 : 0);
-    return lvl;
+    let lvl;
+    if (p.sem == null) lvl = p.kw >= 0.5 ? 2 : p.kw >= 0.25 ? 1 : 0;
+    else lvl = Math.max(p.kw >= 0.6 ? 2 : p.kw >= 0.3 ? 1 : 0, p.sem >= 0.72 ? 2 : p.sem >= 0.6 ? 1 : 0);
+    return Math.min(lvl, p.cap == null ? 2 : p.cap);
   };
+
+  // KI-Zuordnung: ein Satz der Antwort zählt nur für die Erwartungspunkte, zu denen er
+  // (fast) am besten passt – sonst würde ein allgemeiner Satz überall „ähnlich“ wirken.
+  function assignSem(m, margin = 0.03) {
+    const J = m.length ? m[0].length : 0;
+    const best = Array.from({ length: J }, (_, j) => Math.max(...m.map(r => r[j])));
+    return m.map(r => Math.max(0, ...r.map((v, j) => v >= best[j] - margin ? v : 0)));
+  }
 
   /* ---------- Stufe 2: KI auf dem Gerät ---------- */
   let extractorP = null;
@@ -236,7 +260,8 @@
   const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
 
   function userChunks(text) {
-    const s = sentences(text.replace(/\n+/g, '. ').replace(/\.\s*\./g, '.'));
+    const s = text.replace(/\s+/g, ' ').replace(/\b([zdu])\.\s?([Bha])\./g, '$1§ $2§')
+      .split(/(?<=[.!?:])\s+(?=[A-ZÄÖÜ„"(])/).map(x => x.replace(/§/g, '.').trim()).filter(x => x.length > 5);
     const list = s.length ? s : [text];
     const chunks = [...list];
     for (let i = 0; i + 1 < list.length; i++) chunks.push(list[i] + ' ' + list[i + 1]);
@@ -286,7 +311,7 @@
     let tmr;
     ta.addEventListener('input', () => { count(); clearTimeout(tmr); tmr = setTimeout(() => store.set(DRAFT_KEY + task.id, ta.value.trim() ? ta.value : null), 400); });
 
-    let semOn = false, busy = false;
+    let semOn = false, busy = false, listMode = false;
     const current = () => { const v = $('prPart').value; return v === '' ? all : all.filter(p => p.group === groups[+v]); };
     const status = (msg, pct) => {
       const s = $('prStatus');
@@ -300,7 +325,7 @@
       if (text.length < 20) { $('prOut').innerHTML = '<p class="pr-empty">Schreib erst ein paar Sätze – dann kann ich vergleichen.</p>'; return; }
       const pts = current();
       pts.forEach(p => { p.sem = null; });
-      scoreKeywords(pts, analyseUser(text));
+      listMode = scoreKeywords(pts, analyseUser(text));
       if (semOn) {
         busy = true;
         try {
@@ -309,7 +334,8 @@
           const exp = await embed(ex, pts.map(p => p.text.slice(0, 600)), (a, b) => status('KI vergleicht die Bedeutung …', a / (b * 2)));
           const chunks = userChunks(text);
           const usr = await embed(ex, chunks, (a, b) => status('KI vergleicht die Bedeutung …', 0.5 + a / (b * 2)));
-          pts.forEach((p, i) => { p.sem = Math.max(...usr.map(u => dot(exp[i], u))); });
+          const sem = assignSem(exp.map(e => usr.map(u => dot(e, u))));
+          pts.forEach((p, i) => { p.sem = sem[i]; });
           status(null);
         } catch (e) {
           console.error(e);
@@ -328,7 +354,8 @@
         <div class="pr-big">${pct}<small>%</small></div>
         <div><b>${ok} von ${lv.length} Punkten drin</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''}
         <div class="pr-bar three"><i class="g" style="width:${ok / lv.length * 100}%"></i><i class="y" style="width:${half / lv.length * 100}%"></i></div>
-        <small>${semOn ? '🧠 mit KI-Bedeutungsabgleich' : 'Stichwort-Abgleich · Tipp: „Genauer prüfen“ erkennt auch Umschreibungen'}</small></div></div>`;
+        <small>${semOn ? '🧠 mit KI-Bedeutungsabgleich' : 'Stichwort-Abgleich · erkennt eigene Formulierungen nur teilweise – „Genauer prüfen (KI)“ ist da deutlich besser'}</small></div></div>`;
+      if (listMode) h += `<div class="info pr-warn">📝 <b>Das sieht nach einer Stichwortliste aus.</b> Im Abi gibt es Punkte für Erklärungen und Zusammenhänge, nicht für Begriffe allein – deshalb ist hier nichts grün. Schreib ganze Sätze, dann prüf nochmal.</div>`;
       let g = null;
       pts.forEach((p, i) => {
         if (p.group !== g) { g = p.group; h += `<div class="pr-group">${esc(g)}</div>`; }
@@ -355,5 +382,5 @@
     $('prNo').onclick = () => { $('prConsent').hidden = true; };
   }
 
-  window.AbiCheck = { mount, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf };
+  window.AbiCheck = { mount, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf, _assign: assignSem, _chunks: userChunks, _isList: isList };
 })();
