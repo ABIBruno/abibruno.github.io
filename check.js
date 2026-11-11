@@ -1,0 +1,359 @@
+/* ABIdasmuss – Antwort prüfen
+   Vergleicht eine eigene Antwort mit dem Erwartungsbild (der Lösung).
+   Stufe 1: Stichwort- und Zahlenabgleich (sofort, offline).
+   Stufe 2: optional ein kleines KI-Modell, das auf dem eigenen Gerät läuft
+            und auch umschriebene Inhalte erkennt (einmaliger Download nach Zustimmung).
+   Der eingegebene Text verlässt nie das Gerät. */
+(function () {
+  'use strict';
+
+  const MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
+  const MODEL_MB = 120;
+  const CONSENT_KEY = 'abi-ki-ok';
+  const DRAFT_KEY = 'abi-pr-';
+  const LIB = new URL('vendor/tfjs/', document.baseURI).href;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* egal */ } }
+  };
+
+  /* ---------- Text-Hilfen ---------- */
+  const norm = s => String(s).toLowerCase()
+    .replace(/­/g, '').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+
+  const STOP = new Set(('aber alle allem allen aller alles also andere anderen anderer anderes auch bereits besonders beide beiden bzw dabei dadurch daher damit danach dann darauf daraus darin darueber darum dass davon dazu dennoch deren derzeit deshalb desto dessen diese diesem diesen dieser dieses dort durch eben ebenfalls eigentlich einem einen einer eines einige einigen einmal etwa etwas folgende folgenden ganz gegen gegenueber genau gerade gibt hier hierbei hierzu hingegen immer indem insgesamt jedoch jeder jedes jeweils kann koennen koennte lediglich mehr mehrere meist muss muessen nach naechste neben nicht noch nunmehr oder ohne schon sehr sich sind sodass sofern solche solchen sondern sowie sowohl ueber unter viele vielmehr vom vor waehrend wann warum weil weiter welche welcher wenn werden wieder wird wobei wodurch wurde wurden zudem zugleich zum zur zwar zwischen somit ergibt ergeben ergibt ergeben beispiel beispielsweise insbesondere allerdings aufgabe teilaufgabe loesung ausserdem gleichzeitig zunaechst schliesslich letztlich folglich naemlich laut gemaess bezueglich hinsichtlich aufgrund anhand mithilfe innerhalb ausserhalb oberhalb unterhalb hinaus heraus herum wegen trotz statt anstatt seit sobald solange bevor nachdem obwohl falls weshalb wieso weshalb dafuer dagegen damals deswegen ebenso genauso ausgehend vergleicht betraegt betragen liegen liegt stehen steht gilt gelten handelt handeln bedeutet bezeichnet zeigt zeigen fuehrt fuehren erfolgt erfolgen entsteht entstehen').split(' '));
+
+  function stem(w) {
+    for (const suf of ['en', 'er', 'es', 'em', 'e', 'n', 's']) {
+      if (w.endsWith(suf) && w.length - suf.length >= 5) return w.slice(0, -suf.length);
+    }
+    return w;
+  }
+
+  // deutsche Zahl -> number (35.841,00 € / 35841 / 6,5 % / 0.5)
+  function parseNum(s) {
+    s = String(s).replace(/[\s%€]/g, '');
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    const v = parseFloat(s);
+    return isFinite(v) ? v : null;
+  }
+  const NUM_RE = /\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?/g;
+  const DATE_RE = /\b\d{1,2}\.\s?\d{1,2}\.(?:\s?\d{2,4})?/g;
+
+  function numbersIn(text, strict) {
+    const out = [];
+    const t = String(text).replace(DATE_RE, ' ');
+    for (const m of t.matchAll(NUM_RE)) {
+      const raw = m[0];
+      // „3.1“ / „3.2.1“ mit Punkt sind Aufgabennummern, keine Dezimalzahlen
+      if (strict && /^\d+\.\d+$/.test(raw) && !/^\d{1,3}\.\d{3}$/.test(raw)) continue;
+      if (strict && /\d\.\d+\.\d/.test(t.slice(m.index, m.index + raw.length + 3))) continue;
+      const v = parseNum(raw);
+      if (v == null) continue;
+      if (strict && (v === 0 || v === 1)) continue;
+      out.push({ raw, v });
+    }
+    return out;
+  }
+
+  /* ---------- Erwartungsbild zerlegen ---------- */
+  function sentences(text) {
+    let t = text.replace(/\s+/g, ' ').trim();
+    t = t.replace(/\b([zdu])\.\s?([Bha])\./g, '$1§ $2§')
+      .replace(/\b(bzw|ca|evtl|ggf|inkl|zzgl|vgl|Nr|bspw|usw|etc|max|min|mind|abzgl|insb|sog|Mio|Mrd|Tsd|ff|Abb|Abs|Art|ggü|i\.d\.R)\./g, '$1§');
+    let parts = t.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(])/);
+    // sehr lange Sätze an Semikolon / Gedankenstrich teilen
+    parts = parts.flatMap(p => {
+      if (p.length < 240) return [p];
+      const sub = p.split(/;\s+|\s[–—]\s(?=\S)/).map(x => x.trim()).filter(Boolean);
+      const merged = [];
+      for (const s of sub) {
+        if (merged.length && (s.length < 60 || merged[merged.length - 1].length < 60)) merged[merged.length - 1] += ' – ' + s;
+        else merged.push(s);
+      }
+      return merged;
+    });
+    return parts.map(p => p.replace(/§/g, '.').trim()).filter(p => p.length > 15);
+  }
+
+  function termsOf(sentence) {
+    const words = sentence.match(/[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß/-]*[A-Za-zÄÖÜäöüß]/g) || [];
+    const seen = new Set(), list = [];
+    words.forEach((w0, idx) => {
+      const pieces = w0.includes('-') || w0.includes('/') ? w0.split(/[-/]+/) : [w0];
+      for (const w of pieces) {
+        if (w.length < 5) continue;
+        const n = norm(w);
+        if (STOP.has(n)) continue;
+        const noun = /^[A-ZÄÖÜ]/.test(w);
+        if (!noun && w.length < 11) continue;
+        if (idx === 0 && w.length < 9) continue; // Satzanfang ist oft kein Fachbegriff
+        const key = stem(n);
+        if (key.length < 4 || seen.has(key)) continue;
+        seen.add(key);
+        list.push({ type: 'w', label: w, key });
+      }
+    });
+    // spezifische (lange) Begriffe zuerst, max. 8
+    list.sort((a, b) => b.key.length - a.key.length);
+    const words8 = list.slice(0, 8);
+    const nums = [];
+    for (const n of numbersIn(sentence, true)) {
+      if (nums.some(x => x.v === n.v)) continue;
+      nums.push({ type: 'n', label: n.raw, v: n.v });
+      if (nums.length >= 6) break;
+    }
+    // in Originalreihenfolge zurück
+    const order = t => { const m = new RegExp('(^|[^\\d.,])' + t.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\d])').exec(sentence); return m ? m.index : 1e9; };
+    return [...words8, ...nums].sort((a, b) => order(a) - order(b));
+  }
+
+  function blocksOf(html) {
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    root.querySelectorAll('script,style,img,svg,figure,.noprint').forEach(n => n.remove());
+    const out = [];
+    let group = 'Lösung';
+    const walk = el => {
+      for (const n of el.children) {
+        const tag = n.tagName;
+        if (/^H[1-6]$/.test(tag)) { group = n.textContent.trim().replace(/:$/, '') || group; continue; }
+        if (tag === 'TABLE') {
+          const rows = [...n.querySelectorAll('tr')].map(tr => [...tr.children].map(c => c.textContent.trim()).filter(Boolean).join(' | ')).filter(Boolean);
+          if (rows.length) out.push({ group, table: true, text: rows.join(' ; ') });
+          continue;
+        }
+        if (tag === 'P' || tag === 'LI' || tag === 'BLOCKQUOTE' && !n.querySelector('p,li')) {
+          let text = n.textContent.replace(/\s+/g, ' ').trim();
+          if (!text) continue;
+          const strongOnly = n.children.length === 1 && /^(STRONG|B)$/.test(n.children[0].tagName) && n.children[0].textContent.trim() === text;
+          if (strongOnly && text.length < 80) { group = text.replace(/:$/, ''); continue; }
+          const m = text.match(/^([^:]{3,70}?):\s+(.{20,})$/s);
+          if (m && tag === 'P' && !/[.!?]\s/.test(m[1]) && (/\(\s*\d[\d.,\s–-]*\)\s*$/.test(m[1]) || m[1].length <= 35)) { group = m[1].trim(); text = m[2]; }
+          out.push({ group, text });
+          continue;
+        }
+        walk(n);
+      }
+    };
+    walk(root);
+    return out;
+  }
+
+  function buildPoints(html) {
+    const pts = [];
+    for (const b of blocksOf(html)) {
+      const parts = b.table ? [b.text] : sentences(b.text);
+      for (const s of parts) {
+        const terms = termsOf(s);
+        if (terms.length < (b.table ? 1 : 2)) continue;
+        pts.push({ group: b.group, text: b.table ? 'Tabelle: ' + s.replace(/ ; /g, ' · ') : s, terms, table: !!b.table });
+      }
+    }
+    return pts;
+  }
+
+  /* ---------- Stufe 1: Stichworte + Zahlen ---------- */
+  function analyseUser(text) {
+    const n = norm(text);
+    return { raw: text, n, squash: n.replace(/[^a-z0-9]/g, ''), nums: numbersIn(text, false).map(x => x.v) };
+  }
+
+  function wordHit(key, u) {
+    if (u.n.includes(key) || u.squash.includes(key)) return 1;
+    for (const cut of key.length >= 12 ? [2, 3] : key.length >= 9 ? [2] : []) { // Wortformen: ausscheidender ~ ausscheiden
+      const k = key.slice(0, -cut);
+      if (u.n.includes(k) || u.squash.includes(k)) return 0.75;
+    }
+    if (key.length >= 10) { // Komposita: beide Teile vorhanden?
+      for (let i = 4; i <= key.length - 5; i++) {
+        const a = key.slice(0, i), b = key.slice(i);
+        if (u.n.includes(b) && (u.n.includes(a) || u.n.includes(a.replace(/s$/, '')))) return 0.75;
+      }
+    }
+    return 0;
+  }
+  const numHit = (v, u) => u.nums.some(x => Math.abs(x - v) <= Math.max(0.011, Math.abs(v) * 0.005)) ? 1 : 0;
+
+  function scoreKeywords(points, u) {
+    for (const p of points) {
+      let got = 0, total = 0;
+      for (const t of p.terms) {
+        const w = t.type === 'n' ? 1.5 : 1;
+        t.hit = t.type === 'n' ? numHit(t.v, u) : wordHit(t.key, u);
+        got += t.hit * w; total += w;
+      }
+      p.kw = total ? got / total : 0;
+    }
+  }
+
+  const levelOf = p => {
+    let lvl = p.kw >= 0.6 ? 2 : p.kw >= 0.3 ? 1 : 0;
+    if (p.sem != null) lvl = Math.max(lvl, p.sem >= 0.7 ? 2 : p.sem >= 0.56 ? 1 : 0);
+    return lvl;
+  };
+
+  /* ---------- Stufe 2: KI auf dem Gerät ---------- */
+  let extractorP = null;
+  function loadModel(onProgress) {
+    if (extractorP) return extractorP;
+    extractorP = (async () => {
+      const T = await import(LIB + 'transformers.min.js');
+      T.env.allowLocalModels = false;
+      T.env.useBrowserCache = true;
+      T.env.backends.onnx.wasm.wasmPaths = LIB;
+      T.env.backends.onnx.wasm.numThreads = 1;
+      T.env.backends.onnx.wasm.proxy = false;
+      const files = {};
+      return T.pipeline('feature-extraction', MODEL, {
+        dtype: 'q8', device: 'wasm',
+        progress_callback: e => {
+          if (e.status === 'progress' && e.total) {
+            files[e.file] = [e.loaded, e.total];
+            const v = Object.values(files), l = v.reduce((s, x) => s + x[0], 0), t = v.reduce((s, x) => s + x[1], 0);
+            onProgress && onProgress(l, t);
+          }
+        }
+      });
+    })();
+    extractorP.catch(() => { extractorP = null; });
+    return extractorP;
+  }
+
+  async function embed(ex, texts, onStep) {
+    const out = [];
+    for (let i = 0; i < texts.length; i += 8) {
+      const r = await ex(texts.slice(i, i + 8), { pooling: 'mean', normalize: true });
+      out.push(...r.tolist());
+      onStep && onStep(Math.min(texts.length, i + 8), texts.length);
+      await new Promise(res => setTimeout(res, 0)); // Seite bleibt bedienbar
+    }
+    return out;
+  }
+  const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+
+  function userChunks(text) {
+    const s = sentences(text.replace(/\n+/g, '. ').replace(/\.\s*\./g, '.'));
+    const list = s.length ? s : [text];
+    const chunks = [...list];
+    for (let i = 0; i + 1 < list.length; i++) chunks.push(list[i] + ' ' + list[i + 1]);
+    return chunks.slice(0, 120);
+  }
+
+  /* ---------- Oberfläche ---------- */
+  function html(id) {
+    return `
+    <section class="panel pruef" id="pruef">
+      <h2>🔍 ANTWORT PRÜFEN</h2>
+      <p class="pr-intro">Schreib deine Lösung hier rein (oder füg sie ein). Die Seite vergleicht sie mit dem Erwartungsbild und zeigt dir, welche Punkte drin sind und was noch fehlt. <b>Dein Text bleibt auf deinem Gerät</b> – er wird nirgendwohin geschickt.</p>
+      <label class="pr-sel">Prüfen für <select id="prPart"></select></label>
+      <textarea id="prText" rows="9" placeholder="Deine Antwort …" spellcheck="true"></textarea>
+      <div class="pr-actions">
+        <button class="btn" id="prGo">PRÜFEN</button>
+        <button class="btn ghost" id="prKI" title="Erkennt auch umschriebene Inhalte – läuft auf deinem Gerät">🧠 GENAUER PRÜFEN (KI)</button>
+        <span class="pr-count" id="prCount"></span>
+      </div>
+      <div class="info pr-consent" id="prConsent" hidden>
+        <p><b>🧠 KI-Prüfung auf deinem Gerät</b></p>
+        <p>Dafür wird einmalig ein kleines Sprachmodell (ca. ${MODEL_MB} MB) von <b>Hugging Face</b> geladen und im Browser gespeichert. Danach rechnet dein Gerät selbst – das kann beim ersten Mal ein bis zwei Minuten dauern. Dein Text wird dabei <b>nicht</b> verschickt. Beim Download erhält Hugging Face (USA) deine IP-Adresse, wie bei jedem Seitenaufruf – in den USA gilt nicht unbedingt dasselbe Datenschutzniveau wie in der EU (mehr unter Datenschutz). Tipp: lieber im WLAN.</p>
+        <div class="pr-actions"><button class="btn green" id="prYes">ZUSTIMMEN &amp; LADEN</button><button class="btn ghost" id="prNo">ABBRECHEN</button></div>
+      </div>
+      <div class="pr-status" id="prStatus" hidden></div>
+      <div id="prOut" aria-live="polite"></div>
+      <p class="pr-note">Das ist keine Note: Der Check sieht, ob Inhalte vorkommen – nicht, ob deine Begründung stimmt oder gut formuliert ist.</p>
+    </section>`;
+  }
+
+  function mount(task, after) {
+    if (!task || !task.solution || !after) return;
+    const old = document.getElementById('pruef'); if (old) old.remove();
+    after.insertAdjacentHTML('afterend', html(task.id));
+    const $ = id => document.getElementById(id);
+    const all = buildPoints(task.solution);
+    if (!all.length) { $('pruef').remove(); return; }
+    const groups = [...new Set(all.map(p => p.group))];
+    $('prPart').innerHTML = `<option value="">Ganze Aufgabe (${all.length} Punkte)</option>` +
+      groups.map((g, i) => `<option value="${i}">${esc(g.length > 60 ? g.slice(0, 57) + '…' : g)}</option>`).join('');
+    if (groups.length < 2) $('prPart').closest('label').hidden = true;
+
+    const ta = $('prText');
+    ta.value = store.get(DRAFT_KEY + task.id) || '';
+    const count = () => { const w = (ta.value.match(/\S+/g) || []).length; $('prCount').textContent = w ? `${w} Wörter` : ''; };
+    count();
+    let tmr;
+    ta.addEventListener('input', () => { count(); clearTimeout(tmr); tmr = setTimeout(() => store.set(DRAFT_KEY + task.id, ta.value.trim() ? ta.value : null), 400); });
+
+    let semOn = false, busy = false;
+    const current = () => { const v = $('prPart').value; return v === '' ? all : all.filter(p => p.group === groups[+v]); };
+    const status = (msg, pct) => {
+      const s = $('prStatus');
+      if (msg == null) { s.hidden = true; return; }
+      s.hidden = false;
+      s.innerHTML = `<span>${msg}</span>` + (pct != null ? `<div class="pr-bar"><i style="width:${Math.round(pct * 100)}%"></i></div>` : '');
+    };
+
+    async function run() {
+      const text = ta.value.trim();
+      if (text.length < 20) { $('prOut').innerHTML = '<p class="pr-empty">Schreib erst ein paar Sätze – dann kann ich vergleichen.</p>'; return; }
+      const pts = current();
+      pts.forEach(p => { p.sem = null; });
+      scoreKeywords(pts, analyseUser(text));
+      if (semOn) {
+        busy = true;
+        try {
+          const ex = await loadModel((l, t) => status(`Lade KI-Modell … ${Math.round(l / 1e6)} von ${Math.round(t / 1e6)} MB`, l / t));
+          status('KI vergleicht die Bedeutung …', 0);
+          const exp = await embed(ex, pts.map(p => p.text.slice(0, 600)), (a, b) => status('KI vergleicht die Bedeutung …', a / (b * 2)));
+          const chunks = userChunks(text);
+          const usr = await embed(ex, chunks, (a, b) => status('KI vergleicht die Bedeutung …', 0.5 + a / (b * 2)));
+          pts.forEach((p, i) => { p.sem = Math.max(...usr.map(u => dot(exp[i], u))); });
+          status(null);
+        } catch (e) {
+          console.error(e);
+          status('⚠️ Die KI-Prüfung konnte nicht geladen werden (Verbindung oder Browser zu alt). Der Stichwort-Check unten funktioniert trotzdem.');
+          semOn = false;
+        } finally { busy = false; }
+      }
+      render(pts);
+    }
+
+    function render(pts) {
+      const lv = pts.map(levelOf);
+      const ok = lv.filter(x => x === 2).length, half = lv.filter(x => x === 1).length, miss = lv.length - ok - half;
+      const pct = Math.round((ok + half * 0.5) / lv.length * 100);
+      let h = `<div class="pr-sum">
+        <div class="pr-big">${pct}<small>%</small></div>
+        <div><b>${ok} von ${lv.length} Punkten drin</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''}
+        <div class="pr-bar three"><i class="g" style="width:${ok / lv.length * 100}%"></i><i class="y" style="width:${half / lv.length * 100}%"></i></div>
+        <small>${semOn ? '🧠 mit KI-Bedeutungsabgleich' : 'Stichwort-Abgleich · Tipp: „Genauer prüfen“ erkennt auch Umschreibungen'}</small></div></div>`;
+      let g = null;
+      pts.forEach((p, i) => {
+        if (p.group !== g) { g = p.group; h += `<div class="pr-group">${esc(g)}</div>`; }
+        const cls = ['miss', 'half', 'ok'][lv[i]];
+        const lbl = ['fehlt', 'teilweise', 'drin'][lv[i]];
+        const chips = p.terms.map(t => `<span class="${t.hit >= 1 ? 'hit' : t.hit > 0 ? 'part' : 'no'}">${esc(t.label)}</span>`).join('');
+        h += `<div class="pr-pt ${cls}"><span class="pr-dot" title="${lbl}"></span><div>
+          <div class="pr-chips">${chips}</div>
+          <details><summary>Erwartung anzeigen${p.sem != null ? ` · Bedeutung ${Math.round(p.sem * 100)} %` : ''}</summary><p>${esc(p.text)}</p></details>
+        </div></div>`;
+      });
+      h += `<p class="pr-legend"><span class="hit">gefunden</span><span class="part">ähnlich</span><span class="no">fehlt</span></p>`;
+      $('prOut').innerHTML = h;
+    }
+
+    $('prGo').onclick = () => { if (!busy) run(); };
+    $('prPart').onchange = () => { if ($('prOut').innerHTML && !busy) run(); };
+    $('prKI').onclick = () => {
+      if (busy) return;
+      if (store.get(CONSENT_KEY) === '1') { semOn = true; $('prKI').classList.add('on'); run(); }
+      else { $('prConsent').hidden = false; $('prConsent').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    };
+    $('prYes').onclick = () => { store.set(CONSENT_KEY, '1'); $('prConsent').hidden = true; semOn = true; $('prKI').classList.add('on'); run(); };
+    $('prNo').onclick = () => { $('prConsent').hidden = true; };
+  }
+
+  window.AbiCheck = { mount, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf };
+})();

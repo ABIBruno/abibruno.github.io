@@ -619,6 +619,7 @@
     bindTimer(t.id);
     if (window.AbiChat && AbiChat.enabled) AbiChat.mark(t, n);
     addPrintButtons(t, n);
+    if (window.AbiCheck) AbiCheck.mount(t, document.getElementById('sol'));
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
       const items = tl.map(id => lect.find(v => v.id === id)).filter(Boolean).sort((a, b) => isSN(a) - isSN(b));
