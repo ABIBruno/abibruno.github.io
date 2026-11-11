@@ -600,3 +600,6 @@ html[data-theme="light"] .badge.sn,html[data-theme="light"] em.sn{color:#fff}
 .pr-need{font-size:12px;color:var(--muted);margin:8px 0 2px;padding-left:24px;font-style:italic}
 .pr-pt.opt{opacity:.5}
 .pr-pt.opt .pr-dot{background:transparent;border:1px dashed var(--muted);box-shadow:none}
+.pr-remove{margin:10px 0 0;font-size:12px;color:var(--muted)}
+.pr-remove .linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit}
+.pr-remove .linkbtn:hover{color:var(--red)}

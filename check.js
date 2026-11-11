@@ -247,12 +247,17 @@
     return list;
   }
 
-  /* Ampel je Punkt – Schwellen aus dem Qualitätstest (qa/testset.json):
-     nur Stichworte: 0.50 / 0.25 · mit KI: Stichworte 0.60 / 0.30, Bedeutung 0.72 / 0.60 */
+  /* Ampel je Punkt – Schwellen aus dem Qualitätstest (qa/testset_ewb.json):
+     nur Stichworte: 0.50 / 0.25 · mit KI: Stichworte 0.60 / 0.30, Bedeutung 0.72 / 0.60,
+     kombiniert (mind. 20 % Fachwörter): Bedeutung 0.62 / 0.50 */
   const levelOf = p => {
     let lvl;
     if (p.sem == null) lvl = p.kw >= 0.5 ? 2 : p.kw >= 0.25 ? 1 : 0;
-    else lvl = Math.max(p.kw >= 0.6 ? 2 : p.kw >= 0.3 ? 1 : 0, p.sem >= 0.72 ? 2 : p.sem >= 0.6 ? 1 : 0);
+    else {
+      lvl = Math.max(p.kw >= 0.6 ? 2 : p.kw >= 0.3 ? 1 : 0, p.sem >= 0.72 ? 2 : p.sem >= 0.6 ? 1 : 0);
+      // KI fast sicher + mindestens ein passendes Fachwort/Zahl -> zählt auch
+      if (p.kw >= 0.2) lvl = Math.max(lvl, p.sem >= 0.62 ? 2 : p.sem >= 0.5 ? 1 : 0);
+    }
     return Math.min(lvl, p.cap == null ? 2 : p.cap);
   };
 
@@ -333,9 +338,11 @@
       <div class="info pr-consent" id="prConsent" hidden>
         <p><b>🧠 KI-Prüfung auf deinem Gerät</b></p>
         <p>Dafür wird einmalig ein kleines Sprachmodell (ca. ${MODEL_MB} MB) von <b>Hugging Face</b> geladen und im Browser gespeichert. Danach rechnet dein Gerät selbst – das kann beim ersten Mal ein bis zwei Minuten dauern. Dein Text wird dabei <b>nicht</b> verschickt. Beim Download erhält Hugging Face (USA) deine IP-Adresse, wie bei jedem Seitenaufruf – in den USA gilt nicht unbedingt dasselbe Datenschutzniveau wie in der EU (mehr unter Datenschutz). Tipp: lieber im WLAN.</p>
+        <p>Die KI bleibt gespeichert, bis du sie hier mit <b>„KI vom Gerät entfernen“</b> löschst – damit nimmst du auch deine Zustimmung zurück. <b>iPhone:</b> Safari löscht gespeicherte Seitendaten nach 7 Tagen ohne Besuch, dann wird die KI neu geladen und du wirst nochmal gefragt. Das passiert nicht, wenn du die Seite über <i>Teilen → Zum Home-Bildschirm</i> wie eine App speicherst.</p>
         <div class="pr-actions"><button class="btn green" id="prYes">ZUSTIMMEN &amp; LADEN</button><button class="btn ghost" id="prNo">ABBRECHEN</button></div>
       </div>
       <div class="pr-status" id="prStatus" hidden></div>
+      <p class="pr-remove" id="prRemoveRow" hidden><button class="linkbtn" id="prRemove" type="button">🗑️ KI vom Gerät entfernen</button> <span>· löscht das gespeicherte Sprachmodell und deine Zustimmung</span></p>
       <div id="prOut" aria-live="polite"></div>
       <p class="pr-note">Das ist keine Note: Der Check sieht, ob Inhalte vorkommen – nicht, ob deine Begründung stimmt oder gut formuliert ist.</p>
     </section>`;
@@ -430,7 +437,19 @@
       if (store.get(CONSENT_KEY) === '1') { semOn = true; $('prKI').classList.add('on'); run(); }
       else { $('prConsent').hidden = false; $('prConsent').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
     };
-    $('prYes').onclick = () => { store.set(CONSENT_KEY, '1'); $('prConsent').hidden = true; semOn = true; $('prKI').classList.add('on'); run(); };
+    $('prYes').onclick = () => { store.set(CONSENT_KEY, '1'); $('prConsent').hidden = true; semOn = true; $('prKI').classList.add('on'); showRemove(); run(); };
+    // Widerruf: Modell + Zustimmung löschen (genauso einfach wie zustimmen)
+    const showRemove = () => { $('prRemoveRow').hidden = store.get(CONSENT_KEY) !== '1'; };
+    showRemove();
+    $('prRemove').onclick = async () => {
+      if (busy) return;
+      store.set(CONSENT_KEY, null);
+      try { if (window.caches) await caches.delete('transformers-cache'); } catch (e) { /* egal */ }
+      extractorP = null; semOn = false;
+      $('prKI').classList.remove('on'); showRemove();
+      status('✅ KI und Zustimmung wurden von diesem Gerät gelöscht. Der Stichwort-Check funktioniert weiter.');
+      if ($('prOut').innerHTML) run();
+    };
     $('prNo').onclick = () => { $('prConsent').hidden = true; };
   }
 
