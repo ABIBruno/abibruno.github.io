@@ -79,7 +79,7 @@
     return parts.map(p => p.replace(/§/g, '.').trim()).filter(p => p.length > 15);
   }
 
-  function termsOf(sentence) {
+  function termsOf(sentence, frag) {
     const words = sentence.match(/[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß/-]*[A-Za-zÄÖÜäöüß]/g) || [];
     const seen = new Set(), list = [];
     words.forEach((w0, idx) => {
@@ -89,8 +89,8 @@
         const n = norm(w);
         if (STOP.has(n)) continue;
         const noun = /^[A-ZÄÖÜ]/.test(w);
-        if (!noun && w.length < 11) continue;
-        if (idx === 0 && w.length < 9) continue; // Satzanfang ist oft kein Fachbegriff
+        if (!noun && w.length < (frag ? 9 : 11)) continue;
+        if (idx === 0 && !frag && w.length < 9) continue; // Satzanfang ist oft kein Fachbegriff
         const key = stem(n);
         if (key.length < 4 || seen.has(key)) continue;
         seen.add(key);
@@ -111,16 +111,35 @@
     return [...words8, ...nums].sort((a, b) => order(a) - order(b));
   }
 
-  function blocksOf(html) {
+  // Offizielles Erwartungsbild (Feld „ewb“, aus den Lösungsvorschlägen des Kultusministeriums):
+  // <p class="lead"> = Oberbegriff (kein Prüfpunkt), <table class="rows"> = jede Zeile ein Punkt,
+  // <div data-need="N"> = nur N der Punkte darin sind nötig („z“ = Beispiele: etwa die Hälfte)
+  function blocksOf(html, official) {
     const root = document.createElement('div');
     root.innerHTML = html;
     root.querySelectorAll('script,style,img,svg,figure,.noprint').forEach(n => n.remove());
     const out = [];
-    let group = 'Lösung';
+    let group = official ? 'Erwartungsbild' : 'Lösung', altN = 0;
+    const altOf = n => { const d = n.closest('[data-need]'); if (!d) return {}; if (!d.dataset.alt) d.dataset.alt = String(++altN); return { alt: d.dataset.alt, need: d.dataset.need }; };
+    const noBE = t => t.replace(/\(?\s*\d+\s*BE\s*\)?/g, ' ').replace(/\s+/g, ' ').trim();
     const walk = el => {
       for (const n of el.children) {
         const tag = n.tagName;
         if (/^H[1-6]$/.test(tag)) { group = n.textContent.trim().replace(/:$/, '') || group; continue; }
+        if (official && n.classList.contains('lead')) continue;
+        if (tag === 'TABLE' && n.classList.contains('rows')) {
+          const trs = [...n.querySelectorAll('tr')];
+          const numCells = tr => [...tr.children].filter(c => /^\s*[-+=]?\s*[\d.,]+\s*(%|€)?\s*$/.test(c.textContent)).length;
+          const isHead = tr => trs.length > 2 && tr === trs[0] && (
+            !/\d/.test(tr.textContent) && [...tr.children].every(c => c.textContent.trim().split(/\s+/).length <= 3) ||
+            numCells(tr) === 0 && numCells(trs[1]) >= 2);   // Spaltenköpfe über einer Zahlentabelle
+          for (const tr of trs) {
+            if (isHead(tr)) continue;   // Spaltenüberschriften sind kein Prüfpunkt
+            const text = noBE([...tr.children].map(c => c.textContent.trim()).filter(Boolean).join(' | '));
+            if (text) out.push({ group, table: true, row: true, text, ...altOf(tr) });
+          }
+          continue;
+        }
         if (tag === 'TABLE') {
           const rows = [...n.querySelectorAll('tr')].map(tr => [...tr.children].map(c => c.textContent.trim()).filter(Boolean).join(' | ')).filter(Boolean);
           if (rows.length) out.push({ group, table: true, text: rows.join(' ; ') });
@@ -128,7 +147,10 @@
         }
         if (tag === 'P' || tag === 'LI' || tag === 'BLOCKQUOTE' && !n.querySelector('p,li')) {
           let text = n.textContent.replace(/\s+/g, ' ').trim();
+          if (official) text = noBE(text);
           if (!text) continue;
+          if (official && /:$/.test(text) && text.length < 60) continue;   // „Die Schüler erklären folgende Rechte:“ – Überleitung, kein Inhalt
+          if (official) { out.push({ group, text, frag: tag === 'LI' || n.classList.contains('skizze'), ...altOf(n) }); continue; }
           const strongOnly = n.children.length === 1 && /^(STRONG|B)$/.test(n.children[0].tagName) && n.children[0].textContent.trim() === text;
           if (strongOnly && text.length < 80) { group = text.replace(/:$/, ''); continue; }
           const m = text.match(/^([^:]{3,70}?):\s+(.{20,})$/s);
@@ -143,17 +165,39 @@
     return out;
   }
 
-  function buildPoints(html) {
+  function buildPoints(html, official) {
     const pts = [];
-    for (const b of blocksOf(html)) {
-      const parts = b.table ? [b.text] : sentences(b.text);
+    for (const b of blocksOf(html, official)) {
+      const parts = b.table || b.frag ? [b.text] : sentences(b.text);
       for (const s of parts) {
-        const terms = termsOf(s);
-        if (terms.length < (b.table ? 1 : 2)) continue;
-        pts.push({ group: b.group, text: b.table ? 'Tabelle: ' + s.replace(/ ; /g, ' · ') : s, terms, table: !!b.table });
+        const terms = termsOf(s, b.frag || b.row);
+        if (terms.length < (b.table || b.frag ? 1 : 2)) continue;
+        pts.push({ group: b.group, text: b.table && !b.row ? 'Tabelle: ' + s.replace(/ ; /g, ' · ') : s, terms, table: !!b.table, alt: b.alt, need: b.need });
       }
     }
+    // Mengenangaben: Anzahl nötiger Punkte je Block
+    const alts = {};
+    pts.forEach(p => { if (p.alt) (alts[p.alt] = alts[p.alt] || []).push(p); });
+    for (const list of Object.values(alts)) {
+      const need = list[0].need === 'z' ? Math.ceil(list.length / 2) : Math.min(list.length, parseInt(list[0].need, 10) || list.length);
+      list.forEach(p => { p.needN = need; p.altSize = list.length; });
+    }
     return pts;
+  }
+
+  // Wertung: in Blöcken mit Mengenangabe zählen nur die besten N Punkte, der Rest ist „nicht nötig“
+  function levelsOf(pts) {
+    const lv = pts.map(levelOf);
+    const seen = new Set();
+    pts.forEach(p => { p.opt = false; });
+    pts.forEach(p => {
+      if (!p.alt || seen.has(p.alt)) return;
+      seen.add(p.alt);
+      const idx = pts.map((q, j) => q.alt === p.alt ? j : -1).filter(j => j >= 0).sort((a, b) => lv[b] - lv[a]);
+      idx.slice(p.needN).forEach(j => { pts[j].opt = true; });
+    });
+    const counted = lv.filter((_, i) => !pts[i].opt);
+    return { lv, pct: counted.length ? counted.reduce((s, x) => s + x / 2, 0) / counted.length : 0, counted };
   }
 
   /* ---------- Stufe 1: Stichworte + Zahlen ---------- */
@@ -265,15 +309,20 @@
     const list = s.length ? s : [text];
     const chunks = [...list];
     for (let i = 0; i + 1 < list.length; i++) chunks.push(list[i] + ' ' + list[i + 1]);
-    return chunks.slice(0, 120);
+    // Aufzählungssätze zusätzlich in Teilsätze zerlegen – das Erwartungsbild besteht oft aus kurzen Stichpunkten
+    for (const x of list) {
+      const cl = x.split(/,\s+|;\s+|\s+und\s+|\s+sowie\s+|\s+aber\s+/).map(c => c.trim()).filter(c => c.split(/\s+/).length >= 2);
+      if (cl.length > 1) chunks.push(...cl);
+    }
+    return [...new Set(chunks)].slice(0, 160);
   }
 
   /* ---------- Oberfläche ---------- */
-  function html(id) {
+  function html(id, official) {
     return `
     <section class="panel pruef" id="pruef">
       <h2>🔍 ANTWORT PRÜFEN</h2>
-      <p class="pr-intro">Schreib deine Lösung hier rein (oder füg sie ein). Die Seite vergleicht sie mit dem Erwartungsbild und zeigt dir, welche Punkte drin sind und was noch fehlt. <b>Dein Text bleibt auf deinem Gerät</b> – er wird nirgendwohin geschickt.</p>
+      <p class="pr-intro">Schreib deine Lösung hier rein (oder füg sie ein). Die Seite vergleicht sie mit dem ${official ? '<b>offiziellen Erwartungsbild</b> (Lösungsvorschlag des Kultusministeriums)' : 'Erwartungsbild'} und zeigt dir, welche Punkte drin sind und was noch fehlt. <b>Dein Text bleibt auf deinem Gerät</b> – er wird nirgendwohin geschickt.</p>
       <label class="pr-sel">Prüfen für <select id="prPart"></select></label>
       <textarea id="prText" rows="9" placeholder="Deine Antwort …" spellcheck="true"></textarea>
       <div class="pr-actions">
@@ -293,11 +342,12 @@
   }
 
   function mount(task, after) {
-    if (!task || !task.solution || !after) return;
+    if (!task || !(task.ewb || task.solution) || !after) return;
     const old = document.getElementById('pruef'); if (old) old.remove();
-    after.insertAdjacentHTML('afterend', html(task.id));
+    after.insertAdjacentHTML('afterend', html(task.id, !!task.ewb));
     const $ = id => document.getElementById(id);
-    const all = buildPoints(task.solution);
+    const official = !!task.ewb;
+    const all = buildPoints(official ? task.ewb : task.solution, official);
     if (!all.length) { $('pruef').remove(); return; }
     const groups = [...new Set(all.map(p => p.group))];
     $('prPart').innerHTML = `<option value="">Ganze Aufgabe (${all.length} Punkte)</option>` +
@@ -347,24 +397,26 @@
     }
 
     function render(pts) {
-      const lv = pts.map(levelOf);
-      const ok = lv.filter(x => x === 2).length, half = lv.filter(x => x === 1).length, miss = lv.length - ok - half;
-      const pct = Math.round((ok + half * 0.5) / lv.length * 100);
+      const { lv, pct: share, counted } = levelsOf(pts);
+      const ok = counted.filter(x => x === 2).length, half = counted.filter(x => x === 1).length, miss = counted.length - ok - half;
+      const pct = Math.round(share * 100), tot = counted.length || 1;
       let h = `<div class="pr-sum">
         <div class="pr-big">${pct}<small>%</small></div>
-        <div><b>${ok} von ${lv.length} Punkten drin</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''}
-        <div class="pr-bar three"><i class="g" style="width:${ok / lv.length * 100}%"></i><i class="y" style="width:${half / lv.length * 100}%"></i></div>
+        <div><b>${ok} von ${counted.length} nötigen Punkten drin</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''}
+        <div class="pr-bar three"><i class="g" style="width:${ok / tot * 100}%"></i><i class="y" style="width:${half / tot * 100}%"></i></div>
         <small>${semOn ? '🧠 mit KI-Bedeutungsabgleich' : 'Stichwort-Abgleich · erkennt eigene Formulierungen nur teilweise – „Genauer prüfen (KI)“ ist da deutlich besser'}</small></div></div>`;
       if (listMode) h += `<div class="info pr-warn">📝 <b>Das sieht nach einer Stichwortliste aus.</b> Im Abi gibt es Punkte für Erklärungen und Zusammenhänge, nicht für Begriffe allein – deshalb ist hier nichts grün. Schreib ganze Sätze, dann prüf nochmal.</div>`;
-      let g = null;
+      let g = null, a = null;
       pts.forEach((p, i) => {
-        if (p.group !== g) { g = p.group; h += `<div class="pr-group">${esc(g)}</div>`; }
-        const cls = ['miss', 'half', 'ok'][lv[i]];
-        const lbl = ['fehlt', 'teilweise', 'drin'][lv[i]];
+        if (p.group !== g) { g = p.group; a = null; h += `<div class="pr-group">${esc(g)}</div>`; }
+        if (p.alt && p.alt !== a && p.needN < p.altSize) h += `<div class="pr-need">Hier reichen ${p.needN} von ${p.altSize} Punkten</div>`;
+        a = p.alt || null;
+        const cls = p.opt && lv[i] === 0 ? 'opt' : ['miss', 'half', 'ok'][lv[i]];
+        const lbl = p.opt && lv[i] === 0 ? 'nicht nötig' : ['fehlt', 'teilweise', 'drin'][lv[i]];
         const chips = p.terms.map(t => `<span class="${t.hit >= 1 ? 'hit' : t.hit > 0 ? 'part' : 'no'}">${esc(t.label)}</span>`).join('');
         h += `<div class="pr-pt ${cls}"><span class="pr-dot" title="${lbl}"></span><div>
           <div class="pr-chips">${chips}</div>
-          <details><summary>Erwartung anzeigen${p.sem != null ? ` · Bedeutung ${Math.round(p.sem * 100)} %` : ''}</summary><p>${esc(p.text)}</p></details>
+          <details><summary>${official ? 'Erwartungsbild anzeigen' : 'Erwartung anzeigen'}${p.sem != null ? ` · Bedeutung ${Math.round(p.sem * 100)} %` : ''}</summary><p>${esc(p.text)}</p></details>
         </div></div>`;
       });
       h += `<p class="pr-legend"><span class="hit">gefunden</span><span class="part">ähnlich</span><span class="no">fehlt</span></p>`;
@@ -382,5 +434,5 @@
     $('prNo').onclick = () => { $('prConsent').hidden = true; };
   }
 
-  window.AbiCheck = { mount, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf, _assign: assignSem, _chunks: userChunks, _isList: isList };
+  window.AbiCheck = { mount, _levels: levelsOf, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf, _assign: assignSem, _chunks: userChunks, _isList: isList };
 })();
