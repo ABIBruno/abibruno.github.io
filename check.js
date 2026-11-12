@@ -1,18 +1,11 @@
 /* ABIdasmuss – Antwort prüfen
-   Vergleicht eine eigene Antwort mit dem Erwartungsbild (der Lösung).
-   Stufe 1: Stichwort- und Zahlenabgleich (sofort, offline).
-   Stufe 2: optional ein kleines KI-Modell, das auf dem eigenen Gerät läuft
-            und auch umschriebene Inhalte erkennt (einmaliger Download nach Zustimmung).
-   Der eingegebene Text verlässt nie das Gerät. */
+   Stufe 1: Stichwort- und Zahlenabgleich mit dem Erwartungsbild (sofort, im Browser, kostenlos).
+   Stufe 2: KI-Feedback über die API (Worker /ki) – nur nach Zustimmung in den Cookie-Einstellungen.
+   Das frühere KI-Modell im Browser (Hugging Face) wurde entfernt. */
 (function () {
   'use strict';
 
-  const MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
-  const MODEL_MB = 120;
-  const CONSENT_KEY = 'abi-ki-ok';
   const DRAFT_KEY = 'abi-pr-';
-  const LIB = new URL('vendor/tfjs/', document.baseURI).href;
-
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -261,99 +254,94 @@
     return Math.min(lvl, p.cap == null ? 2 : p.cap);
   };
 
-  // KI-Zuordnung: ein Satz der Antwort zählt nur für die Erwartungspunkte, zu denen er
-  // (fast) am besten passt – sonst würde ein allgemeiner Satz überall „ähnlich“ wirken.
-  function assignSem(m, margin = 0.03) {
-    const J = m.length ? m[0].length : 0;
-    const best = Array.from({ length: J }, (_, j) => Math.max(...m.map(r => r[j])));
-    return m.map(r => Math.max(0, ...r.map((v, j) => v >= best[j] - margin ? v : 0)));
-  }
 
-  /* ---------- Stufe 2: KI auf dem Gerät ---------- */
-  let extractorP = null;
-  function loadModel(onProgress) {
-    if (extractorP) return extractorP;
-    extractorP = (async () => {
-      const T = await import(LIB + 'transformers.min.js');
-      T.env.allowLocalModels = false;
-      T.env.useBrowserCache = true;
-      T.env.backends.onnx.wasm.wasmPaths = LIB;
-      T.env.backends.onnx.wasm.numThreads = 1;
-      T.env.backends.onnx.wasm.proxy = false;
-      const files = {};
-      return T.pipeline('feature-extraction', MODEL, {
-        dtype: 'q8', device: 'wasm',
-        progress_callback: e => {
-          if (e.status === 'progress' && e.total) {
-            files[e.file] = [e.loaded, e.total];
-            const v = Object.values(files), l = v.reduce((s, x) => s + x[0], 0), t = v.reduce((s, x) => s + x[1], 0);
-            onProgress && onProgress(l, t);
-          }
-        }
-      });
-    })();
-    extractorP.catch(() => { extractorP = null; });
-    return extractorP;
-  }
+  /* =====================================================================
+     KI-Prüfung über API (Grundgerüst, modular)
+     ---------------------------------------------------------------------
+     Ablauf: 1) Stichwort-Check im Browser (kostenlos)  2) schlankes Paket an
+     den Worker (/ki)  3) Worker fragt den KI-Anbieter  4) Bericht als Tabelle.
+     Bausteine zum Austauschen:
+       • WISSEN.modus  – welches Vorwissen mitgeht (siehe wissen())
+       • Anbieter      – steckt komplett im Worker (KI_PROVIDER), nicht hier
+     ===================================================================== */
+  const WISSEN = { modus: 'titel' };   // 'titel' | 'index' | 'anbieter'
+  const MAX_ANTWORT = 12000;            // Zeichen – längere Texte werden gekürzt (Kostenbremse)
+  const CACHE_KEY = 'abi-ki-';
+  const BASE = (document.currentScript && document.currentScript.src) || document.baseURI;
 
-  async function embed(ex, texts, onStep) {
-    const out = [];
-    for (let i = 0; i < texts.length; i += 8) {
-      const r = await ex(texts.slice(i, i + 8), { pooling: 'mean', normalize: true });
-      out.push(...r.tolist());
-      onStep && onStep(Math.min(texts.length, i + 8), texts.length);
-      await new Promise(res => setTimeout(res, 0)); // Seite bleibt bedienbar
+  // Wissens-Baustein: liefert nur Quellen, die der User gerade sehen darf (kommt von app.js)
+  async function wissen(sources, pts) {
+    const quellen = sources.map(s => ({ id: s.id, title: s.title, topic: s.topic || '', kind: s.kind }));
+    if (WISSEN.modus === 'index' && window.AbiIndex) {
+      // später: eigener Suchindex – die besten Textausschnitte zu den offenen Punkten
+      const q = pts.filter(p => p.lvl < 2).map(p => p.text).join(' ');
+      return { modus: 'index', quellen, auszuege: (await window.AbiIndex.search(q, sources, 5)).map(a => ({ id: a.id, text: String(a.text).slice(0, 800) })) };
     }
-    return out;
+    if (WISSEN.modus === 'anbieter') return { modus: 'anbieter', quellen, auszuege: [] }; // Anbieter durchsucht hinterlegte Dateien selbst
+    return { modus: 'titel', quellen, auszuege: [] };
   }
-  const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
 
-  function userChunks(text) {
-    const s = text.replace(/\s+/g, ' ').replace(/\b([zdu])\.\s?([Bha])\./g, '$1§ $2§')
-      .split(/(?<=[.!?:])\s+(?=[A-ZÄÖÜ„"(])/).map(x => x.replace(/§/g, '.').trim()).filter(x => x.length > 5);
-    const list = s.length ? s : [text];
-    const chunks = [...list];
-    for (let i = 0; i + 1 < list.length; i++) chunks.push(list[i] + ' ' + list[i + 1]);
-    // Aufzählungssätze zusätzlich in Teilsätze zerlegen – das Erwartungsbild besteht oft aus kurzen Stichpunkten
-    for (const x of list) {
-      const cl = x.split(/,\s+|;\s+|\s+und\s+|\s+sowie\s+|\s+aber\s+/).map(c => c.trim()).filter(c => c.split(/\s+/).length >= 2);
-      if (cl.length > 1) chunks.push(...cl);
-    }
-    return [...new Set(chunks)].slice(0, 160);
+  async function hash(s) {
+    const b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+    return [...b].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join('');
   }
+
+  // PDF bleibt im Browser: Text wird hier ausgelesen, die Datei selbst geht nirgendwohin
+  let pdfP = null;
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfP) return pdfP;
+    pdfP = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = new URL('konverter/lib/pdf.min.js', BASE).href;
+      s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('konverter/lib/pdf.worker.min.js', BASE).href; res(window.pdfjsLib); };
+      s.onerror = () => { pdfP = null; rej(new Error('pdf.js')); };
+      document.head.appendChild(s);
+    });
+    return pdfP;
+  }
+  async function pdfText(file) {
+    const lib = await loadPdfJs();
+    const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    let out = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+      const c = await (await pdf.getPage(i)).getTextContent();
+      out += c.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('') + '\n';
+    }
+    return out.replace(/[ \t]+/g, ' ').trim();
+  }
+
+  const plain = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.replace(/\s+/g, ' ').trim(); };
 
   /* ---------- Oberfläche ---------- */
-  function html(id, official) {
+  function html(official) {
     return `
     <section class="panel pruef" id="pruef">
       <h2>🔍 ANTWORT PRÜFEN</h2>
-      <p class="pr-intro">Schreib deine Lösung hier rein (oder füg sie ein). Die Seite vergleicht sie mit dem ${official ? '<b>offiziellen Erwartungsbild</b> (Lösungsvorschlag des Kultusministeriums)' : 'Erwartungsbild'} und zeigt dir, welche Punkte drin sind und was noch fehlt. <b>Dein Text bleibt auf deinem Gerät</b> – er wird nirgendwohin geschickt.</p>
+      <p class="pr-intro">Schreib deine Lösung rein oder lade sie als PDF hoch. Erst vergleicht die Seite selbst mit dem ${official ? '<b>offiziellen Erwartungsbild</b>' : 'Erwartungsbild'} (bleibt auf deinem Gerät). Mit <b>„KI-Feedback“</b> bekommst du zusätzlich eine Bewertung je Anforderung mit Tipps, wo du nachlesen kannst.</p>
       <label class="pr-sel">Prüfen für <select id="prPart"></select></label>
       <textarea id="prText" rows="9" placeholder="Deine Antwort …" spellcheck="true"></textarea>
       <div class="pr-actions">
         <button class="btn" id="prGo">PRÜFEN</button>
-        <button class="btn ghost" id="prKI" title="Erkennt auch umschriebene Inhalte – läuft auf deinem Gerät">🧠 GENAUER PRÜFEN (KI)</button>
+        <button class="btn ghost" id="prKI" title="Bewertung durch eine KI – nur mit Zustimmung (Cookie-Einstellungen)">🤖 KI-FEEDBACK</button>
+        <label class="btn ghost pr-file">📄 PDF LADEN<input type="file" id="prFile" accept="application/pdf" hidden></label>
         <span class="pr-count" id="prCount"></span>
       </div>
-      <div class="info pr-consent" id="prConsent" hidden>
-        <p><b>🧠 KI-Prüfung auf deinem Gerät</b></p>
-        <p>Dafür wird einmalig ein kleines Sprachmodell (ca. ${MODEL_MB} MB) von <b>Hugging Face</b> geladen und im Browser gespeichert. Danach rechnet dein Gerät selbst – das kann beim ersten Mal ein bis zwei Minuten dauern. Dein Text wird dabei <b>nicht</b> verschickt. Beim Download erhält Hugging Face (USA) deine IP-Adresse, wie bei jedem Seitenaufruf – in den USA gilt nicht unbedingt dasselbe Datenschutzniveau wie in der EU (mehr unter Datenschutz). Tipp: lieber im WLAN.</p>
-        <p>Die KI bleibt gespeichert, bis du sie hier mit <b>„KI vom Gerät entfernen“</b> löschst – damit nimmst du auch deine Zustimmung zurück. <b>iPhone:</b> Safari löscht gespeicherte Seitendaten nach 7 Tagen ohne Besuch, dann wird die KI neu geladen und du wirst nochmal gefragt. Das passiert nicht, wenn du die Seite über <i>Teilen → Zum Home-Bildschirm</i> wie eine App speicherst.</p>
-        <div class="pr-actions"><button class="btn green" id="prYes">ZUSTIMMEN &amp; LADEN</button><button class="btn ghost" id="prNo">ABBRECHEN</button></div>
-      </div>
       <div class="pr-status" id="prStatus" hidden></div>
-      <p class="pr-remove" id="prRemoveRow" hidden><button class="linkbtn" id="prRemove" type="button">🗑️ KI vom Gerät entfernen</button> <span>· löscht das gespeicherte Sprachmodell und deine Zustimmung</span></p>
       <div id="prOut" aria-live="polite"></div>
-      <p class="pr-note">Das ist keine Note: Der Check sieht, ob Inhalte vorkommen – nicht, ob deine Begründung stimmt oder gut formuliert ist.</p>
+      <p class="pr-note">Das ist keine Note: Der Check sieht, ob Inhalte vorkommen. Auch die KI kann sich irren – im Zweifel gilt das Erwartungsbild.</p>
     </section>`;
   }
 
-  function mount(task, after) {
+  const LV = ['fehlt', 'teilweise', 'gut erfüllt'];
+  const CLS = ['miss', 'half', 'ok'];
+
+  function mount(task, after, ctx) {
     if (!task || !(task.ewb || task.solution) || !after) return;
     const old = document.getElementById('pruef'); if (old) old.remove();
-    after.insertAdjacentHTML('afterend', html(task.id, !!task.ewb));
-    const $ = id => document.getElementById(id);
     const official = !!task.ewb;
+    after.insertAdjacentHTML('afterend', html(official));
+    const $ = id => document.getElementById(id);
     const all = buildPoints(official ? task.ewb : task.solution, official);
     if (!all.length) { $('pruef').remove(); return; }
     const groups = [...new Set(all.map(p => p.group))];
@@ -368,90 +356,110 @@
     let tmr;
     ta.addEventListener('input', () => { count(); clearTimeout(tmr); tmr = setTimeout(() => store.set(DRAFT_KEY + task.id, ta.value.trim() ? ta.value : null), 400); });
 
-    let semOn = false, busy = false, listMode = false;
+    let busy = false, last = null;
     const current = () => { const v = $('prPart').value; return v === '' ? all : all.filter(p => p.group === groups[+v]); };
-    const status = (msg, pct) => {
-      const s = $('prStatus');
-      if (msg == null) { s.hidden = true; return; }
-      s.hidden = false;
-      s.innerHTML = `<span>${msg}</span>` + (pct != null ? `<div class="pr-bar"><i style="width:${Math.round(pct * 100)}%"></i></div>` : '');
-    };
+    const status = msg => { const s = $('prStatus'); s.hidden = msg == null; if (msg != null) s.innerHTML = msg; };
+    const getSources = async () => { try { return ctx && ctx.sources ? await ctx.sources() : []; } catch (e) { return []; } };
 
-    async function run() {
+    function local() {
       const text = ta.value.trim();
-      if (text.length < 20) { $('prOut').innerHTML = '<p class="pr-empty">Schreib erst ein paar Sätze – dann kann ich vergleichen.</p>'; return; }
+      if (text.length < 20) { $('prOut').innerHTML = '<p class="pr-empty">Schreib erst ein paar Sätze – dann kann ich vergleichen.</p>'; return null; }
       const pts = current();
       pts.forEach(p => { p.sem = null; });
-      listMode = scoreKeywords(pts, analyseUser(text));
-      if (semOn) {
-        busy = true;
-        try {
-          const ex = await loadModel((l, t) => status(`Lade KI-Modell … ${Math.round(l / 1e6)} von ${Math.round(t / 1e6)} MB`, l / t));
-          status('KI vergleicht die Bedeutung …', 0);
-          const exp = await embed(ex, pts.map(p => p.text.slice(0, 600)), (a, b) => status('KI vergleicht die Bedeutung …', a / (b * 2)));
-          const chunks = userChunks(text);
-          const usr = await embed(ex, chunks, (a, b) => status('KI vergleicht die Bedeutung …', 0.5 + a / (b * 2)));
-          const sem = assignSem(exp.map(e => usr.map(u => dot(e, u))));
-          pts.forEach((p, i) => { p.sem = sem[i]; });
-          status(null);
-        } catch (e) {
-          console.error(e);
-          status('⚠️ Die KI-Prüfung konnte nicht geladen werden (Verbindung oder Browser zu alt). Der Stichwort-Check unten funktioniert trotzdem.');
-          semOn = false;
-        } finally { busy = false; }
-      }
-      render(pts);
+      const listMode = scoreKeywords(pts, analyseUser(text));
+      const { lv } = levelsOf(pts);
+      pts.forEach((p, i) => { p.lvl = lv[i]; p.ki = null; });
+      return { text, pts, listMode };
     }
 
-    function render(pts) {
+    async function render(r, sources, kiInfo) {
+      const { pts, listMode } = r;
       const { lv, pct: share, counted } = levelsOf(pts);
-      const ok = counted.filter(x => x === 2).length, half = counted.filter(x => x === 1).length, miss = counted.length - ok - half;
-      const pct = Math.round(share * 100), tot = counted.length || 1;
+      const lvOf = i => pts[i].ki ? pts[i].ki.lvl : lv[i];
+      const cnt = pts.map((p, i) => p.opt && lvOf(i) === 0 ? null : lvOf(i)).filter(x => x != null);
+      const ok = cnt.filter(x => x === 2).length, half = cnt.filter(x => x === 1).length, miss = cnt.length - ok - half;
+      const pct = kiInfo ? Math.round(cnt.reduce((s, x) => s + x / 2, 0) / (cnt.length || 1) * 100) : Math.round(share * 100);
+      const tot = cnt.length || 1;
+      const link = s => `<a class="pr-src" href="${s.kind === 'p' ? '#/privat/' : '#/vorlesung/'}${encodeURIComponent(s.id)}">${s.kind === 'p' ? '🗝️' : s.kind === 'sn' ? '📝' : '📄'} ${esc(s.title)}</a>`;
+      const byId = Object.fromEntries(sources.map(s => [String(s.id), s]));
       let h = `<div class="pr-sum">
         <div class="pr-big">${pct}<small>%</small></div>
-        <div><b>${ok} von ${counted.length} nötigen Punkten drin</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''}
+        <div><b>${ok} gut erfüllt</b>${half ? ` · ${half} teilweise` : ''}${miss ? ` · ${miss} fehlen` : ''} <small>(${cnt.length} nötige Punkte)</small>
         <div class="pr-bar three"><i class="g" style="width:${ok / tot * 100}%"></i><i class="y" style="width:${half / tot * 100}%"></i></div>
-        <small>${semOn ? '🧠 mit KI-Bedeutungsabgleich' : 'Stichwort-Abgleich · erkennt eigene Formulierungen nur teilweise – „Genauer prüfen (KI)“ ist da deutlich besser'}</small></div></div>`;
-      if (listMode) h += `<div class="info pr-warn">📝 <b>Das sieht nach einer Stichwortliste aus.</b> Im Abi gibt es Punkte für Erklärungen und Zusammenhänge, nicht für Begriffe allein – deshalb ist hier nichts grün. Schreib ganze Sätze, dann prüf nochmal.</div>`;
-      let g = null, a = null;
+        <small>${kiInfo ? '🤖 mit KI-Bewertung' : 'Stichwort-Abgleich – für eine inhaltliche Bewertung „KI-Feedback“ nutzen'}</small></div></div>`;
+      if (kiInfo && kiInfo.fazit) h += `<div class="info pr-fazit">💬 ${esc(kiInfo.fazit)}</div>`;
+      if (listMode) h += `<div class="info pr-warn">📝 <b>Das sieht nach einer Stichwortliste aus.</b> Im Abi gibt es Punkte für Erklärungen und Zusammenhänge – schreib ganze Sätze.</div>`;
+      h += `<div class="tblwrap"><table class="pr-tab"><thead><tr><th>Anforderung (Erwartungsbild)</th><th>Bewertung</th><th>Hinweis / Verbesserung</th><th>Nachschauen</th></tr></thead><tbody>`;
+      let g = null;
       pts.forEach((p, i) => {
-        if (p.group !== g) { g = p.group; a = null; h += `<div class="pr-group">${esc(g)}</div>`; }
-        if (p.alt && p.alt !== a && p.needN < p.altSize) h += `<div class="pr-need">Hier reichen ${p.needN} von ${p.altSize} Punkten</div>`;
-        a = p.alt || null;
-        const cls = p.opt && lv[i] === 0 ? 'opt' : ['miss', 'half', 'ok'][lv[i]];
-        const lbl = p.opt && lv[i] === 0 ? 'nicht nötig' : ['fehlt', 'teilweise', 'drin'][lv[i]];
+        if (p.group !== g) { g = p.group; h += `<tr class="pr-grp"><td colspan="4">${esc(g)}</td></tr>`; }
+        const l = lvOf(i), opt = p.opt && l === 0;
         const chips = p.terms.map(t => `<span class="${t.hit >= 1 ? 'hit' : t.hit > 0 ? 'part' : 'no'}">${esc(t.label)}</span>`).join('');
-        h += `<div class="pr-pt ${cls}"><span class="pr-dot" title="${lbl}"></span><div>
-          <div class="pr-chips">${chips}</div>
-          <details><summary>${official ? 'Erwartungsbild anzeigen' : 'Erwartung anzeigen'}${p.sem != null ? ` · Bedeutung ${Math.round(p.sem * 100)} %` : ''}</summary><p>${esc(p.text)}</p></details>
-        </div></div>`;
+        const hint = p.ki && p.ki.hinweis ? esc(p.ki.hinweis) : opt ? 'nicht nötig (es reichen ' + p.needN + ' von ' + p.altSize + ')' : l === 2 ? '–' : `<div class="pr-chips">${chips}</div>`;
+        const qs = (p.ki && p.ki.quellen && p.ki.quellen.length ? p.ki.quellen.map(id => byId[String(id)]).filter(Boolean) : l < 2 && !opt ? sources.slice(0, 2) : []);
+        h += `<tr class="${opt ? 'opt' : CLS[l]}"><td>${esc(p.text)}</td><td><span class="pr-dot"></span>${opt ? 'nicht nötig' : LV[l]}</td><td>${hint}</td><td>${qs.map(link).join('<br>') || '–'}</td></tr>`;
       });
-      h += `<p class="pr-legend"><span class="hit">gefunden</span><span class="part">ähnlich</span><span class="no">fehlt</span></p>`;
+      h += '</tbody></table></div>';
       $('prOut').innerHTML = h;
     }
 
-    $('prGo').onclick = () => { if (!busy) run(); };
-    $('prPart').onchange = () => { if ($('prOut').innerHTML && !busy) run(); };
-    $('prKI').onclick = () => {
-      if (busy) return;
-      if (store.get(CONSENT_KEY) === '1') { semOn = true; $('prKI').classList.add('on'); run(); }
-      else { $('prConsent').hidden = false; $('prConsent').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    $('prGo').onclick = async () => { if (busy) return; const r = local(); if (r) { last = r; render(r, await getSources(), null); } };
+    $('prPart').onchange = () => { if ($('prOut').innerHTML && !busy) $('prGo').onclick(); };
+
+    $('prFile').onchange = async e => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      if (f.size > 15 * 1024 * 1024) { status('⚠️ Die PDF ist zu groß (max. 15 MB).'); return; }
+      status('📄 Lese PDF … (die Datei bleibt auf deinem Gerät)');
+      try { ta.value = (await pdfText(f)).slice(0, MAX_ANTWORT); ta.dispatchEvent(new Event('input')); status(null); }
+      catch (err) { console.error(err); status('⚠️ Die PDF konnte nicht gelesen werden. Ist es ein Scan (Bild)? Dann bitte den Text eintippen.'); }
     };
-    $('prYes').onclick = () => { store.set(CONSENT_KEY, '1'); $('prConsent').hidden = true; semOn = true; $('prKI').classList.add('on'); showRemove(); run(); };
-    // Widerruf: Modell + Zustimmung löschen (genauso einfach wie zustimmen)
-    const showRemove = () => { $('prRemoveRow').hidden = store.get(CONSENT_KEY) !== '1'; };
-    showRemove();
-    $('prRemove').onclick = async () => {
+
+    $('prKI').onclick = async () => {
       if (busy) return;
-      store.set(CONSENT_KEY, null);
-      try { if (window.caches) await caches.delete('transformers-cache'); } catch (e) { /* egal */ }
-      extractorP = null; semOn = false;
-      $('prKI').classList.remove('on'); showRemove();
-      status('✅ KI und Zustimmung wurden von diesem Gerät gelöscht. Der Stichwort-Check funktioniert weiter.');
-      if ($('prOut').innerHTML) run();
+      const C = window.AbiConsent;
+      if (!C || !C.has('ki')) {
+        status(`🚫 <b>Keine Berechtigung – Cookies wurden abgelehnt.</b> Für das KI-Feedback muss dein Text an einen KI-Anbieter geschickt werden. Das geht nur, wenn du unter „Cookie-Einstellungen“ die <b>KI-Prüfung</b> erlaubst. <button class="linkbtn" id="prCk" type="button">Cookie-Einstellungen öffnen</button>`);
+        const b = $('prCk'); if (b && C) b.onclick = () => C.open();
+        return;
+      }
+      const r = local(); if (!r) return;
+      busy = true; $('prKI').classList.add('on');
+      try {
+        const sources = await getSources();
+        const kontext = await wissen(sources, r.pts);
+        const payload = {
+          fach: (window.__CHAT && window.__CHAT.fach) || 'vbwl',
+          aufgabe: plain(task.task).slice(0, 3000),
+          punkte: r.pts.map((p, i) => ({ i, text: p.text.slice(0, 500), vorab: LV[p.lvl], optional: !!p.opt })),
+          antwort: r.text.slice(0, MAX_ANTWORT),
+          kontext
+        };
+        const key = CACHE_KEY + await hash(JSON.stringify(payload));
+        let res = null;
+        try { res = JSON.parse(sessionStorage.getItem(key) || 'null'); } catch (e) { /* egal */ }
+        if (!res) {
+          status('🤖 Die KI bewertet deine Antwort …');
+          const resp = await fetch(C.worker + '/ki', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device': C.deviceId() || '' }, body: JSON.stringify(payload) });
+          res = await resp.json().catch(() => ({ ok: false, error: 'Unerwartete Antwort vom Server.' }));
+          if (!resp.ok || !res.ok) throw Object.assign(new Error(res.error || 'Fehler'), { user: true });
+          try { sessionStorage.setItem(key, JSON.stringify(res)); } catch (e) { /* egal */ }
+        }
+        const map = { gut: 2, teilweise: 1, fehlt: 0 };
+        for (const row of res.rows || []) {
+          const p = r.pts[row.i]; if (!p) continue;
+          p.ki = { lvl: map[row.status] ?? p.lvl, hinweis: String(row.hinweis || '').slice(0, 400), quellen: Array.isArray(row.quellen) ? row.quellen.slice(0, 3) : [] };
+        }
+        status(null);
+        last = r;
+        render(r, sources, { fazit: String(res.fazit || '').slice(0, 600) });
+      } catch (e) {
+        console.error(e);
+        status('⚠️ ' + (e.user ? esc(e.message) : 'Das KI-Feedback ist gerade nicht erreichbar.') + ' Der Stichwort-Check unten funktioniert trotzdem.');
+        if (!last) { const rr = local(); if (rr) render(rr, await getSources(), null); }
+      } finally { busy = false; $('prKI').classList.remove('on'); }
     };
-    $('prNo').onclick = () => { $('prConsent').hidden = true; };
   }
 
-  window.AbiCheck = { mount, _levels: levelsOf, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf, _assign: assignSem, _chunks: userChunks, _isList: isList };
+  window.AbiCheck = { mount, WISSEN, _levels: levelsOf, _buildPoints: buildPoints, _analyse: analyseUser, _score: scoreKeywords, _level: levelOf, _isList: isList };
 })();

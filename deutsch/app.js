@@ -159,7 +159,7 @@
     btn.disabled = false; btn.textContent = 'ENTSPERREN';
     if (await tryKey(k)) {
       key = k;
-      store.set('sessionStorage', KEYNAME, toB64(await crypto.subtle.exportKey('raw', k)));
+      store.set('sessionStorage', KEYNAME, toB64(await crypto.subtle.exportKey('raw', k))); if (window.AbiConsent) AbiConsent.ping('login', 'deutsch');
       updateLockBtn(); closeModals();
       const p = pending; pending = null;
       if (p) p(); else render();

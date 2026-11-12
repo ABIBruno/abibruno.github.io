@@ -122,7 +122,7 @@
     btn.disabled = false; btn.textContent = 'ENTSPERREN';
     if (await tryKey(k)) {
       key = k;
-      store.set('sessionStorage', 'abi-key', toB64(await crypto.subtle.exportKey('raw', k)));
+      store.set('sessionStorage', 'abi-key', toB64(await crypto.subtle.exportKey('raw', k))); if (window.AbiConsent) AbiConsent.ping('login', 'vbwl');
       updateLockBtn(); closeModals();
       const p = pending; pending = null;
       if (p) p(); else render();
@@ -619,7 +619,15 @@
     bindTimer(t.id);
     if (window.AbiChat && AbiChat.enabled) AbiChat.mark(t, n);
     addPrintButtons(t, n);
-    if (window.AbiCheck) AbiCheck.mount(t, document.getElementById('sol'));
+    if (window.AbiCheck) AbiCheck.mount(t, document.getElementById('sol'), {
+      // nur, was der User gerade sehen darf: freigeschaltete Vorlesungen/Schülernotizen, Privat nur mit Privat-Passwort
+      sources: async () => {
+        const lect = await getLect();
+        const out = tl.map(id => lect.find(v => v.id === id)).filter(Boolean).map(v => ({ id: v.id, title: v.title, topic: v.topic, lb: v.lb, kind: isSN(v) ? 'sn' : 'v' }));
+        if (pkey) (await getPriv()).filter(z => (z.lect || []).some(id => tl.includes(id))).forEach(z => out.push({ id: z.id, title: z.title, topic: 'Zusammenfassung', lb: z.lb, kind: 'p' }));
+        return out;
+      }
+    });
     document.getElementById('lectBtn').onclick = async () => {
       const lect = await getLect();
       const items = tl.map(id => lect.find(v => v.id === id)).filter(Boolean).sort((a, b) => isSN(a) - isSN(b));

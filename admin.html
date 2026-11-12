@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://abidasmuss-upload.brunokmoch08.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>ABIdasmuss · Admin</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+:root{--bg:#050816;--panel:#0d1226;--line:#25305a;--cyan:#22d3ee;--pink:#f472b6;--green:#4ade80;--gold:#facc15;--txt:#e8ecff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif;padding:24px}
+h1{font-family:Orbitron,sans-serif;letter-spacing:.08em;background:linear-gradient(90deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;margin:0 0 4px}
+.sub{opacity:.7;margin:0 0 20px}.wrap{max-width:1000px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}.kpi b{display:block;font-size:30px;font-family:Orbitron,sans-serif;color:var(--cyan)}.kpi span{opacity:.75;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.75}
+.bar{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--pink));min-width:2px}
+input,button{font:inherit;border-radius:10px;border:1px solid var(--line);background:#0a0f22;color:var(--txt);padding:9px 12px}
+button{border-color:var(--cyan);cursor:pointer;font-weight:700}button.main{background:linear-gradient(90deg,var(--cyan),#a855f7);color:#050816;border:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.err{color:var(--pink)}.ok{color:var(--green)}
+label.sw{display:flex;gap:8px;align-items:center}small{opacity:.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ADMIN-DASHBOARD</h1>
+  <p class="sub">Nutzung von ABIdasmuss · Geräte werden nur als unlesbarer Hash gezählt – keine Kennungen, keine IPs.</p>
+
+  <div class="card" id="login">
+    <form class="row" id="f"><input type="password" id="code" placeholder="Admin-Code" autocomplete="current-password" required> <button class="main">ÖFFNEN</button> <span class="err" id="err"></span></form>
+  </div>
+
+  <div id="dash" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><b>Letzte Tage</b><span><button id="d7" type="button">7 Tage</button> <button id="d14" type="button">14 Tage</button> <button id="d30" type="button">30 Tage</button></span></div>
+      <div style="overflow-x:auto"><table id="tab"></table></div>
+      <small>Geräte = verschiedene Geräte mit Anmeldung (nur mit Statistik-Zustimmung) · Mehrfach = Geräte mit mehr als einer Anmeldung am Tag · Ohne Zustimmung = Anmeldungen ohne Kennung · Besuche = Seitenaufrufe ohne Kennung.</small>
+    </div>
+    <div class="card">
+      <b>KI-Feedback &amp; Limit</b>
+      <p><small>Das Limit gilt pro Gerät für 5 Stunden. Danach wird der Eintrag automatisch gelöscht und beim nächsten Mal neu (gehasht) angelegt.</small></p>
+      <div class="row">
+        <label class="sw"><input type="checkbox" id="kiOn"> KI-Feedback eingeschaltet</label>
+        <label class="sw"><input type="checkbox" id="limOn"> Limit aktiv</label>
+        <label class="sw">Tokens pro Gerät / 5 Std. <input type="number" id="limN" min="1000" step="1000" style="width:120px"></label>
+        <label class="sw">Tageslimit alle Geräte <input type="number" id="dayN" min="0" step="10000" style="width:130px"></label>
+        <button id="save" type="button">SPEICHERN</button> <span id="msg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const W = 'https://abidasmuss-upload.brunokmoch08.workers.dev';
+  let code = '';
+  try { code = sessionStorage.getItem('abi-admin') || ''; } catch (e) {}
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  async function call(path, opt = {}) {
+    const r = await fetch(W + path, { ...opt, headers: { 'Content-Type': 'application/json', 'X-Admin-Code': code, ...(opt.headers || {}) } });
+    const j = await r.json().catch(() => ({ ok: false, error: 'Keine Antwort' }));
+    if (!r.ok || !j.ok) throw new Error(j.error || 'Fehler');
+    return j;
+  }
+  async function load(tage = 14) {
+    const j = await call('/admin/stats?tage=' + tage);
+    $('login').hidden = true; $('dash').hidden = false;
+    const t = j.tage, h = t[0] || {};
+    const sum = k => t.reduce((a, x) => a + (x[k] || 0), 0);
+    const bes = x => Object.values(x.besuche || {}).reduce((a, b) => a + b, 0);
+    $('kpis').innerHTML = [
+      [h.geraete || 0, 'Geräte heute'], [h.anmeldungen || 0, 'Anmeldungen heute'], [h.mehrfach || 0, 'davon mehrfach heute'],
+      [sum('anmeldungen') + sum('anonymeAnmeldungen'), `Anmeldungen (${tage} Tage)`], [t.reduce((a, x) => a + bes(x), 0), `Besuche (${tage} Tage)`], [sum('kiTokens').toLocaleString('de-DE'), `KI-Tokens (${tage} Tage)`]
+    ].map(([v, l]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+    const max = Math.max(1, ...t.map(x => x.anmeldungen + x.anonymeAnmeldungen));
+    $('tab').innerHTML = '<tr><th>Tag</th><th>Geräte</th><th>Anmeldungen</th><th>Mehrfach</th><th>Ohne Zustimmung</th><th>Besuche</th><th>KI-Tokens</th><th style="width:22%"></th></tr>' +
+      t.map(x => `<tr><td>${esc(new Date(x.tag + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }))}</td><td>${x.geraete}</td><td>${x.anmeldungen}</td><td>${x.mehrfach}</td><td>${x.anonymeAnmeldungen}</td><td title="${esc(Object.entries(x.besuche || {}).map(([k, v]) => k + ': ' + v).join(', '))}">${bes(x)}</td><td>${x.kiTokens.toLocaleString('de-DE')}</td><td><div class="bar" style="width:${(x.anmeldungen + x.anonymeAnmeldungen) / max * 100}%"></div></td></tr>`).join('');
+    $('kiOn').checked = j.config.kiAktiv !== false; $('limOn').checked = !!j.config.limitAktiv; $('limN').value = j.config.limitTokens; $('dayN').value = j.config.tagesTokens;
+  }
+  $('f').onsubmit = async e => {
+    e.preventDefault(); code = $('code').value.trim(); $('err').textContent = '';
+    try { await load(); try { sessionStorage.setItem('abi-admin', code); } catch (x) {} } catch (x) { $('err').textContent = x.message; }
+  };
+  ['7', '14', '30'].forEach(n => { $('d' + n).onclick = () => load(+n).catch(x => alert(x.message)); });
+  $('save').onclick = async () => {
+    try { await call('/admin/config', { method: 'POST', body: JSON.stringify({ kiAktiv: $('kiOn').checked, limitAktiv: $('limOn').checked, limitTokens: +$('limN').value, tagesTokens: +$('dayN').value }) }); $('msg').innerHTML = '<span class="ok">Gespeichert ✓</span>'; }
+    catch (x) { $('msg').innerHTML = `<span class="err">${esc(x.message)}</span>`; }
+  };
+  if (code) load().catch(() => { code = ''; try { sessionStorage.removeItem('abi-admin'); } catch (x) {} });
+})();
+</script>
+</body>
+</html>

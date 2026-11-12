@@ -603,3 +603,18 @@ html[data-theme="light"] .badge.sn,html[data-theme="light"] em.sn{color:#fff}
 .pr-remove{margin:10px 0 0;font-size:12px;color:var(--muted)}
 .pr-remove .linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit}
 .pr-remove .linkbtn:hover{color:var(--red)}
+
+/* Prüfbericht (Antwort prüfen) als Tabelle */
+.pr-tab{width:100%;border-collapse:collapse;margin-top:12px;font-size:.92em}
+.pr-tab th,.pr-tab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.pr-tab th{font-size:.8em;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.pr-tab td:nth-child(2){white-space:nowrap;font-weight:700}
+.pr-tab .pr-grp td{font-weight:700;color:var(--cyan);padding-top:14px}
+.pr-tab tr .pr-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--line)}
+.pr-tab tr.ok .pr-dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pr-tab tr.half .pr-dot{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.pr-tab tr.miss .pr-dot{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.pr-tab tr.opt{opacity:.55}
+.pr-src{display:inline-block;margin:2px 0;color:var(--cyan);text-decoration:none}.pr-src:hover{text-decoration:underline}
+.pr-file{cursor:pointer}.pr-fazit{margin-top:10px}
+@media(max-width:700px){.pr-tab thead{display:none}.pr-tab tr{display:block;border-bottom:1px solid var(--line);padding:6px 0}.pr-tab td{display:block;border:0;padding:3px 6px}}

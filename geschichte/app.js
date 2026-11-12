@@ -82,7 +82,7 @@
     const k = await deriveKey(pwInput.value.trim());
     btn.disabled = false; btn.textContent = 'ENTSPERREN';
     if (await tryKey(k)) {
-      key = k; store.set('sessionStorage', KEYNAME, toB64(await crypto.subtle.exportKey('raw', k)));
+      key = k; store.set('sessionStorage', KEYNAME, toB64(await crypto.subtle.exportKey('raw', k))); if (window.AbiConsent) AbiConsent.ping('login', 'geschichte');
       updateLockBtn(); closeModals();
       const p = pending; pending = null; p ? p() : render();
     } else {
