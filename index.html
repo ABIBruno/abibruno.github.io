@@ -51,12 +51,21 @@ footer a{color:var(--muted)}
 .pod-link b{display:block;font-family:Orbitron,sans-serif;font-weight:700;font-size:.66rem;letter-spacing:.14em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .pod-link small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:0}
 .pod-link:hover,.pod-link:focus-visible{border-color:var(--violet);box-shadow:0 0 22px rgba(181,140,255,.3);outline:none;transform:translateY(-1px)}
+.eth-link{top:62px}
+.eth-link svg{width:30px;height:30px;flex:none}
+.eth-link b{background:none;color:#5aa0e6;-webkit-text-fill-color:#5aa0e6}
+:root[data-theme="light"] .eth-link b{color:#2b6cb0;-webkit-text-fill-color:#2b6cb0}
+.eth-link:hover,.eth-link:focus-visible{border-color:#e6be55;box-shadow:0 0 22px rgba(230,190,85,.3)}
+footer{position:relative}
+footer .credits{position:absolute;left:18px;top:50%;transform:translateY(-50%);text-align:left;letter-spacing:.03em}
+@media (max-width:700px){footer .credits{position:static;transform:none;text-align:center;margin-bottom:8px}}
 @media (max-width:560px){.pod-link{padding:5px}.pod-link span{display:none}}
 @media (max-width:560px){.choices{grid-template-columns:1fr;max-width:340px}}
 </style>
 </head>
 <body>
 <a class="pod-link" href="podcast/" aria-label="Morgenbriefing – täglicher News-Podcast"><img src="podcast/icon-192.png" alt=""><span><b>MORGENBRIEFING</b><small>Täglicher News-Podcast</small></span></a>
+<a class="pod-link eth-link" href="ethik/" aria-label="Ethik – interaktives Poster: Skinner, Roth, Henecka"><svg viewBox="0 0 30 30" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="#7fa8d9" fill-opacity=".75"/><circle cx="19" cy="11" r="9" fill="#e6be55" fill-opacity=".75"/><circle cx="15" cy="19" r="9" fill="#86bc9a" fill-opacity=".75"/></svg><span><b>ETHIK</b><small>Interaktives Poster</small><small>Skinner, Roth, Henecka</small></span></a>
 <a class="tool-link" href="konverter/">PDF → Word / PowerPoint</a>
 <main>
   <h1>ABIDASMUSS</h1>
@@ -68,7 +77,7 @@ footer a{color:var(--muted)}
     <a class="card geschichte" href="geschichte/"><span class="ico">🏛️</span><span class="name">GESCHICHTE</span><span class="desc">Methodenwerkstatt</span></a>
   </nav>
 </main>
-<footer>© 2026 ABIDASMUSS · <a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></footer>
+<footer><div class="credits">von Florian Dahmann, Marie Lommatzsch und Bruno Kmoch</div>© 2026 ABIDASMUSS · <a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></footer>
 <script src="consent.js?v=1"></script>
 </body>
 </html>
