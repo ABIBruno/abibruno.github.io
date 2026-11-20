@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#05070f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Morgenbriefing">
+<title>Morgenbriefing | ABIdasmuss</title>
+<script>try{if(localStorage.getItem('abi-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="podcast.css?v=1">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-moonclock" viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ Anmeldung ============ -->
+<section id="login" class="login" hidden>
+  <a class="back" href="../"><svg><use href="#i-left"/></svg>ABIDASMUSS</a>
+  <div class="login-card">
+    <img src="icon-192.png" alt="" class="login-icon" width="96" height="96">
+    <h1 class="brand">MORGENBRIEFING</h1>
+    <p class="sub">Dein täglicher News-Podcast</p>
+    <form id="login-form">
+      <input type="text" name="username" value="morgenbriefing" autocomplete="username" hidden>
+      <label class="field">
+        <svg><use href="#i-lock"/></svg>
+        <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      </label>
+      <button type="submit" id="login-btn" class="btn-primary">Entsperren</button>
+      <p id="login-msg" class="msg" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ App ============ -->
+<div id="app" hidden>
+  <header class="topbar">
+    <a class="back" href="../"><svg><use href="#i-left"/></svg>ABIDASMUSS</a>
+    <div class="topbar-right">
+      <button id="install-btn" class="pill" hidden>Als App installieren</button>
+      <button id="theme-btn" class="round" aria-label="Hell oder dunkel"><svg><use href="#i-sun"/></svg></button>
+      <button id="menu-btn" class="round" aria-label="Menü"><svg><use href="#i-more"/></svg></button>
+      <div id="menu" class="menu glass" hidden>
+        <button id="refresh-btn">Neu laden</button>
+        <button id="logout-btn">Abmelden</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow" id="heute"></p>
+      <h1 class="brand">MORGENBRIEFING</h1>
+    </section>
+
+    <p id="ios-hint" class="hint" hidden>Für die App: in Safari auf <b>Teilen</b> tippen, dann <b>„Zum Home-Bildschirm“</b>.</p>
+
+    <article id="featured" class="featured" hidden>
+      <div class="featured-glow" aria-hidden="true"></div>
+      <p class="featured-label"><span id="f-badge" class="badge">Neu</span><span id="f-meta"></span></p>
+      <h2 id="f-titel"></h2>
+      <p id="f-beschr" class="featured-text"></p>
+      <div class="featured-actions">
+        <button id="f-play" class="btn-play"><svg><use href="#i-play"/></svg><span>Jetzt hören</span></button>
+        <div id="f-progress" class="progress" hidden><span></span></div>
+      </div>
+    </article>
+
+    <div class="segmented" role="tablist" aria-label="Filter">
+      <button class="seg active" data-filter="alle" role="tab" aria-selected="true">Alle</button>
+      <button class="seg" data-filter="morgen" role="tab" aria-selected="false">Morgenfolgen</button>
+      <button class="seg" data-filter="sonderfolge" role="tab" aria-selected="false">Sonderfolgen</button>
+    </div>
+
+    <ul id="liste" class="liste"></ul>
+    <div id="leer" class="empty" hidden>
+      <p>Noch keine Folgen hier.</p>
+      <p class="muted">Die nächste Morgenfolge kommt gegen 6 Uhr.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ============ Mini-Player ============ -->
+<div id="mini" class="mini glass" hidden>
+  <button id="mini-open" class="mini-info" aria-label="Player öffnen">
+    <img src="icon-192.png" alt="" width="44" height="44">
+    <span><b id="mini-titel"></b><small id="mini-sub"></small></span>
+  </button>
+  <button id="mini-play" class="mini-btn" aria-label="Abspielen"><svg><use href="#i-play"/></svg></button>
+  <div class="mini-bar"><span id="mini-bar"></span></div>
+</div>
+
+<!-- ============ Großer Player ============ -->
+<section id="sheet" class="sheet" aria-hidden="true">
+  <div class="sheet-inner">
+    <button id="sheet-close" class="sheet-close" aria-label="Player schließen"><svg><use href="#i-down"/></svg></button>
+    <div class="cover"><img src="icon-512.png" alt="" width="512" height="512"></div>
+    <p id="s-meta" class="s-meta"></p>
+    <h2 id="s-titel" class="s-titel"></h2>
+    <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position">
+    <div class="times"><span id="t-now">0:00</span><span id="t-left">0:00</span></div>
+    <div class="controls">
+      <button id="b-back" class="ctl" aria-label="15 Sekunden zurück"><svg><use href="#i-back"/></svg><small>15</small></button>
+      <button id="b-play" class="ctl-main" aria-label="Abspielen"><svg><use href="#i-play"/></svg></button>
+      <button id="b-fwd" class="ctl" aria-label="30 Sekunden vor"><svg><use href="#i-fwd"/></svg><small>30</small></button>
+    </div>
+    <div class="extras">
+      <button id="b-speed" class="pill">1×</button>
+      <button id="b-sleep" class="pill"><svg><use href="#i-moonclock"/></svg><span>Schlaf-Timer</span></button>
+    </div>
+    <details id="s-quellen" class="quellen"><summary>Quellen</summary><div></div></details>
+  </div>
+</section>
+
+<audio id="audio" preload="auto"></audio>
+<script src="podcast.js?v=1"></script>
+</body>
+</html>

@@ -46,10 +46,17 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 16px;le
 footer a{color:var(--muted)}
 .tool-link{position:absolute;top:22px;right:26px;color:var(--muted);font-size:.8rem;letter-spacing:.05em;text-decoration:underline;text-underline-offset:3px}
 .tool-link:hover,.tool-link:focus-visible{color:var(--text)}
+.pod-link{position:absolute;top:16px;left:18px;display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--text);text-decoration:none;font-size:.8rem;letter-spacing:.04em;transition:border-color .15s,box-shadow .15s,transform .15s}
+.pod-link img{width:30px;height:30px;border-radius:50%}
+.pod-link b{display:block;font-family:Orbitron,sans-serif;font-weight:700;font-size:.66rem;letter-spacing:.14em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pod-link small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:0}
+.pod-link:hover,.pod-link:focus-visible{border-color:var(--violet);box-shadow:0 0 22px rgba(181,140,255,.3);outline:none;transform:translateY(-1px)}
+@media (max-width:560px){.pod-link{padding:5px}.pod-link span{display:none}}
 @media (max-width:560px){.choices{grid-template-columns:1fr;max-width:340px}}
 </style>
 </head>
 <body>
+<a class="pod-link" href="podcast/" aria-label="Morgenbriefing – täglicher News-Podcast"><img src="podcast/icon-192.png" alt=""><span><b>MORGENBRIEFING</b><small>Täglicher News-Podcast</small></span></a>
 <a class="tool-link" href="konverter/">PDF → Word / PowerPoint</a>
 <main>
   <h1>ABIDASMUSS</h1>
